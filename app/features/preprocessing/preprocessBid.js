@@ -1,7 +1,7 @@
 // File: app/features/preprocessing/preprocessBid.js
-import { BOILERPLATE_PATTERNS, LEGAL_BOILERPLATE, KEY_SECTIONS } from './constants';
-import { extractTextFromPDF } from './pdfextractor';
-import { processTextWithNLP } from './nlpProcessor';
+import { BOILERPLATE_PATTERNS, LEGAL_BOILERPLATE, KEY_SECTIONS } from './constants.js';
+import { extractTextFromPDF } from './pdfextractor.js';
+import { processTextWithNLP } from './nlpProcessor.js';
 
 // Helper function for basic cleaning
 function basicClean(text) {
