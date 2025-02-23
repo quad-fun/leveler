@@ -38,6 +38,7 @@ const BidUpload = () => {
         })
       );
 
+      console.log('Sending request to API...');
       const response = await fetch('/api/analyze-bids', {
         method: 'POST',
         headers: {
@@ -46,22 +47,18 @@ const BidUpload = () => {
         body: JSON.stringify({ fileContents }),
       });
 
-      if (!response.ok) throw new Error('Analysis failed');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Response:', errorText);
+        throw new Error('Analysis failed: ' + response.status);
+      }
 
       const analysisResults = await response.json();
+      console.log('Received results:', analysisResults);
       setResults(analysisResults);
     } catch (error) {
       console.error('Error:', error);
-      try {
-        const errorResponse = await error.response?.json();
-        if (errorResponse?.retryIn) {
-          setError(`Analysis temporarily unavailable. Please try again in ${errorResponse.retryIn} seconds.`);
-        } else {
-          setError(errorResponse?.message || 'Failed to analyze bids. Please try again.');
-        }
-      } catch (e) {
-        setError('Failed to analyze bids. Please try again.');
-      }
+      setError(error.message || 'Failed to analyze bids');
     } finally {
       setProcessing(false);
     }

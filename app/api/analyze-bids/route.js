@@ -1,4 +1,7 @@
-import OpenAI from 'openai';
+// File: app/api/analyze-bids/route.js
+import { preprocessBid } from '@/features/preprocessing';
+import { OpenAI } from 'openai';
+import { NextResponse } from 'next/server';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -21,9 +24,9 @@ async function analyzeWithRetry(prompt, maxRetries = 3) {
             content: prompt,
           }
         ],
-        temperature: 0.1, // Lower temperature for more consistent structured output
+        temperature: 0.1,
         max_tokens: 4000,
-        response_format: { type: "json_object" } // Enforce JSON response
+        response_format: { type: "json_object" }
       });
 
       return JSON.parse(completion.choices[0].message.content);
@@ -48,15 +51,36 @@ function truncateContent(content, maxLength = 15000) {
 }
 
 export async function POST(request) {
+  console.log('API endpoint /api/analyze-bids was called');
   try {
     const body = await request.json();
     const { fileContents } = body;
 
-    const truncatedContents = fileContents.map(file => ({
-      ...file,
-      content: truncateContent(file.content)
-    }));
+    // Log the incoming data
+    console.log('Received files:', fileContents.map(f => f.name));
 
+    // Preprocess and gather stats for each bid (using await Promise.all for async processing)
+    const preprocessedContents = await Promise.all(
+      fileContents.map(async (file) => {
+        const { processedText, stats, error } = await preprocessBid(file.content);
+        
+        // Log preprocessing results
+        console.log(`Preprocessing stats for ${file.name}:`, {
+          reduction: `${stats.reductionPercent}%`,
+          originalTokens: stats.originalTokens,
+          processedTokens: stats.processedTokens,
+          error: error || 'none'
+        });
+
+        return {
+          ...file,
+          content: truncateContent(processedText),
+          preprocessingStats: stats
+        };
+      })
+    );
+
+    // Construct prompt with preprocessed content
     const prompt = `Analyze these construction bids and provide a comparison in the following exact JSON format:
 {
   "summary": {
@@ -85,20 +109,30 @@ export async function POST(request) {
 
 Bid documents to analyze:
 
-${truncatedContents.map((file, index) => `
+${preprocessedContents.map((file, index) => `
 --- BID DOCUMENT ${index + 1}: ${file.name} ---
 ${file.content}
 `).join('\n\n')}`;
 
     const analysis = await analyzeWithRetry(prompt);
-    return Response.json(analysis);
+
+    // Return analysis along with preprocessing stats
+    return NextResponse.json({ 
+      message: 'Analysis complete',
+      data: {
+        ...analysis,
+        preprocessingStats: preprocessedContents.map(file => ({
+          filename: file.name,
+          ...file.preprocessingStats
+        }))
+      }
+    });
 
   } catch (error) {
-    console.error('Bid analysis error:', error);
-    return Response.json({ 
-      error: 'Failed to analyze bids',
-      message: error.message,
-      retryIn: 60
-    }, { status: error.status || 500 });
+    console.error('API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to analyze bids', message: error.message },
+      { status: 500 }
+    );
   }
 }
