@@ -1,7 +1,7 @@
 // File: app/features/preprocessing/preprocessBid.js
-import { BOILERPLATE_PATTERNS, LEGAL_BOILERPLATE, KEY_SECTIONS } from './constants.js';
-import { extractTextFromPDF } from './pdfextractor.js';
-import { processTextWithNLP } from './nlpProcessor.js';
+import { BOILERPLATE_PATTERNS, LEGAL_BOILERPLATE, KEY_SECTIONS } from './constants';
+import { extractTextFromPDF } from './pdfExtractor';
+import { processTextWithNLP } from './nlpProcessor';
 
 // Helper function for basic cleaning
 function basicClean(text) {
@@ -30,10 +30,21 @@ function extractKeySections(text) {
 
 export async function preprocessBid(input, isPdf = false) {
   let text = input; // Preserve the original input for fallback
+  let nlpResults = {};
+  
   try {
     // If the input is a PDF, extract text from it first
     if (isPdf) {
-      text = await extractTextFromPDF(input);
+      try {
+        text = await extractTextFromPDF(input);
+        if (!text) {
+          console.warn('PDF extraction returned empty text, using original input');
+          text = typeof input === 'string' ? input : '';
+        }
+      } catch (pdfError) {
+        console.error('PDF extraction failed:', pdfError);
+        text = typeof input === 'string' ? input : '';
+      }
     }
 
     // Input validation
@@ -52,17 +63,25 @@ export async function preprocessBid(input, isPdf = false) {
 
     // 4. Extract key sections
     const relevantSections = extractKeySections(processed);
-
-    // 5. Final cleanup
-    processed = basicClean(relevantSections.join('\n\n'));
+    
+    // If no key sections were found, use the entire processed text
+    processed = relevantSections.length > 0 
+      ? basicClean(relevantSections.join('\n\n'))
+      : processed;
 
     // Calculate token statistics
-    const originalTokenCount = text.split(/\s+/).length;
-    const processedTokenCount = processed.split(/\s+/).length;
-    const reductionPercent = ((originalTokenCount - processedTokenCount) / originalTokenCount * 100).toFixed(1);
+    const originalTokenCount = text.split(/\s+/).filter(Boolean).length;
+    const processedTokenCount = processed.split(/\s+/).filter(Boolean).length;
+    const reductionPercent = originalTokenCount === 0 ? 0 :
+      ((originalTokenCount - processedTokenCount) / originalTokenCount * 100).toFixed(1);
 
-    // NLP processing on the final text
-    const nlpResults = processTextWithNLP(processed);
+    // NLP processing on the final text (with error handling)
+    try {
+      nlpResults = processTextWithNLP(processed);
+    } catch (nlpError) {
+      console.error('NLP processing failed:', nlpError);
+      nlpResults = { topics: [], numbers: [], dates: [] };
+    }
 
     // Validate output
     if (!processed) {
@@ -82,7 +101,7 @@ export async function preprocessBid(input, isPdf = false) {
     console.error('Preprocessing failed:', error);
     // Ensure safe fallback: if text isn't a string, default to an empty string
     const safeText = (typeof text === 'string') ? text : '';
-    const tokenCount = safeText.trim() === '' ? 0 : safeText.split(/\s+/).length;
+    const tokenCount = safeText.trim() === '' ? 0 : safeText.split(/\s+/).filter(Boolean).length;
     return {
       processedText: safeText,
       stats: {
@@ -90,6 +109,7 @@ export async function preprocessBid(input, isPdf = false) {
         processedTokens: tokenCount,
         reductionPercent: 0
       },
+      nlp: { topics: [], numbers: [], dates: [] },
       error: error.message
     };
   }

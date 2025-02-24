@@ -1,4 +1,7 @@
 // File: app/features/preprocessing/index.js
-export * from './preprocessbid.js';
-export * from './types.js';
-export * from './constants.js';
+// Remove file extensions and fix duplicate exports
+export * from './preprocessBid';
+export * from './types';
+export * from './constants';
+export * from './pdfExtractor';
+export * from './nlpProcessor';
