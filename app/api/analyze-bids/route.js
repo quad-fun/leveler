@@ -133,4 +133,20 @@ ${file.content}
       retryIn: 60
     }, { status: error.status || 500 });
   }
+  
+  // After analyzing the bid, update the bid record with results
+  const client = await clientPromise;
+  const db = client.db("bidleveling");
+
+  await db.collection("bids").updateOne(
+    { _id: new ObjectId(bidId) },
+    { 
+      $set: { 
+        status: 'analyzed',
+        totalCost: analysis.summary.totalCost,
+        keyComponents: analysis.bidComparison[0].keyComponents,
+        analysisResults: analysis
+      } 
+    }
+  );
 }
