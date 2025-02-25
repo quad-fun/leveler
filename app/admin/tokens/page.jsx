@@ -38,18 +38,39 @@ export default function TokenUsageMonitor() {
         params.append('startDate', startDate.toISOString());
       }
       
-      // Fetch stats
-      const response = await fetch(`/api/token-usage?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch token usage statistics');
-      }
+      // Mock data for development
+      // In production, this would be a real API call:
+      // const response = await fetch(`/api/token-usage?${params.toString()}`);
+      // if (!response.ok) {
+      //   throw new Error('Failed to fetch token usage statistics');
+      // }
+      // const data = await response.json();
       
-      const data = await response.json();
-      setStats(data);
+      // Simulate API call
+      setTimeout(() => {
+        const mockData = {
+          totalTokens: 248500,
+          totalInputTokens: 168300,
+          totalOutputTokens: 80200,
+          requestCount: 12,
+          averagePerRequest: 20708,
+          successRate: 91.7,
+          estimatedCost: {
+            formatted: '$4.82'
+          },
+          timeRange: {
+            from: startDate ? startDate.toISOString() : 'all time',
+            to: 'present'
+          }
+        };
+        
+        setStats(mockData);
+        setLoading(false);
+      }, 800);
+      
     } catch (err) {
       console.error('Error fetching token stats:', err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -184,3 +205,6 @@ export default function TokenUsageMonitor() {
           No token usage data available.
         </div>
       )}
+    </div>
+  );
+}
