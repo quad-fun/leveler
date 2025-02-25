@@ -1,0 +1,1674 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..11b2b32
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1 @@
++OPENAI_API_KEY=your_api_key_here
+diff --git a/.gitignore b/.gitignore
+index 54a3892..8f7519a 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -36,4 +36,7 @@ next-env.d.ts
+ .Spotlight-V100
+ .Trashes
+ ehthumbs.db
+-Thumbs.db
+\ No newline at end of file
++Thumbs.db
++.env
++.env.local .env
++.env
+diff --git a/app/admin/settings/page.jsx b/app/admin/settings/page.jsx
+new file mode 100644
+index 0000000..247a3b0
+--- /dev/null
++++ b/app/admin/settings/page.jsx
+@@ -0,0 +1,159 @@
++'use client';
++
++import React, { useState } from 'react';
++import { preprocessBidDocuments } from '../utils/bidPreprocessor';
++
++const PreprocessingPreview = ({ files }) => {
++  const [preprocessingResults, setPreprocessingResults] = useState(null);
++  const [showDetails, setShowDetails] = useState(false);
++
++ Convert files to format needed by preprocessor
++      const fileContents = await Promise.all(
++        files.map(async (file) => {
++          const text = await file.text();
++          return {
++            name: file.name,
++            content: text
++          };
++        })
++      );
++
++      // Run preprocessing
++      const preprocessed = preprocessBidDocuments(fileContents, {
++        maxContentLength: 12000,
++        removeBoilerplate: true,
++        extractKeyInfo: true,
++        summarizeLongSections: true
++      });
++
++      // Calculate statistics
++      const results = preprocessed.map((processed, index) => {
++        const originalSize = processed.originalSize;
++        const processedSize = processed.content.length;
++        const reduction = originalSize - processedSize;
++        const reductionPercent = ((reduction / originalSize) * 100).toFixed(1);
++        
++        // Estimate tokens (4 chars per token is a rough estimate)
++        const originalTokens = Math.ceil(originalSize / 4);
++        const processedTokens = Math.ceil(processedSize / 4);
++        const tokenReduction = originalTokens - processedTokens;
++        
++        return {
++          name: processed.name,
++          originalSize,
++          processedSize,
++          reduction,
++          reductionPercent,
++          originalTokens,
++          processedTokens,
++          tokenReduction
++        };
++      });
++
++      // Calculate totals
++      const totalOriginalSize = results.reduce((sum, r) => sum + r.originalSize, 0);
++      const totalProcessedSize = results.reduce((sum, r) => sum + r.processedSize, 0);
++      const totalReduction = totalOriginalSize - totalProcessedSize;
++      const totalReductionPercent = ((totalReduction / totalOriginalSize) * 100).toFixed(1);
++      const totalOriginalTokens = results.reduce((sum, r) => sum + r.originalTokens, 0);
++      const totalProcessedTokens = results.reduce((sum, r) => sum + r.processedTokens, 0);
++      
++      setPreprocessingResults({
++        files: results,
++        totals: {
++          originalSize: totalOriginalSize,
++          processedSize: totalProcessedSize,
++          reduction: totalReduction,
++          reductionPercent: totalReductionPercent,
++          originalTokens: totalOriginalTokens,
++          processedTokens: totalProcessedTokens,
++          tokenReduction: totalOriginalTokens - totalProcessedTokens
++        }
++      });
++    } catch (error) {
++      console.error('Preprocessing preview error:', error);
++    }
++  };
++
++  return (
++    <div className="mt-4">
++      {!preprocessingResults ? (
++        <button
++          onClick={previewPreprocessing}
++          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
++          disabled={!files || files.length === 0}
++        >
++          Preview Token Optimization
++        </button>
++      ) : (
++        <div className="bg-gray-50 p-4 rounded-lg">
++          <h4 className="text-lg font-medium mb-2">Token Optimization Preview</h4>
++          
++          <div className="bg-white p-3 rounded border mb-4">
++            <div className="flex justify-between items-center">
++              <div>
++                <p className="font-medium">Total Reduction:</p>
++                <p className="text-2xl font-bold text-green-600">
++                  {preprocessingResults.totals.reductionPercent}% 
++                  <span className="text-sm font-normal ml-1 text-gray-500">
++                    ({preprocessingResults.totals.tokenReduction.toLocaleString()} tokens saved)
++                  </span>
++                </p>
++              </div>
++              <div className="text-right">
++                <p className="text-sm text-gray-500">Before: {preprocessingResults.totals.originalTokens.toLocaleString()} tokens</p>
++                <p className="text-sm text-gray-500">After: {preprocessingResults.totals.processedTokens.toLocaleString()} tokens</p>
++              </div>
++            </div>
++          </div>
++          
++          <button
++            onClick={() => setShowDetails(!showDetails)}
++            className="text-blue-600 hover:text-blue-800 text-sm mb-2"
++          >
++            {showDetails ? 'Hide Details' : 'Show Details'}
++          </button>
++          
++          {showDetails && (
++            <div className="overflow-x-auto">
++              <table className="w-full text-sm">
++                <thead>
++                  <tr className="bg-gray-100">
++                    <th className="px-4 py-2 text-left">File</th>
++                    <th className="px-4 py-2 text-right">Original Size</th>
++                    <th className="px-4 py-2 text-right">Processed Size</th>
++                    <th className="px-4 py-2 text-right">Reduction</th>
++                    <th className="px-4 py-2 text-right">Tokens Saved</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  {preprocessingResults.files.map((result, index) => (
++                    <tr key={index} className="border-b">
++                      <td className="px-4 py-2 font-medium truncate max-w-xs">
++                        {result.name}
++                      </td>
++                      <td className="px-4 py-2 text-right">
++                        {result.originalSize.toLocaleString()} chars
++                      </td>
++                      <td className="px-4 py-2 text-right">
++                        {result.processedSize.toLocaleString()} chars
++                      </td>
++                      <td className="px-4 py-2 text-right font-medium">
++                        {result.reductionPercent}%
++                      </td>
++                      <td className="px-4 py-2 text-right text-green-600">
++                        {result.tokenReduction.toLocaleString()}
++                      </td>
++                    </tr>
++                  ))}
++                </tbody>
++              </table>
++            </div>
++          )}
++        </div>
++      )}
++    </div>
++  );
++};
++
++export default PreprocessingPreview;
+\ No newline at end of file
+diff --git a/app/admin/tokens/page.jsx b/app/admin/tokens/page.jsx
+new file mode 100644
+index 0000000..eaff1da
+--- /dev/null
++++ b/app/admin/tokens/page.jsx
+@@ -0,0 +1,186 @@
++'use client';
++
++import React, { useEffect, useState } from 'react';
++
++export default function TokenUsageMonitor() {
++  const [stats, setStats] = useState(null);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState(null);
++  const [timeRange, setTimeRange] = useState('day'); // day, week, month, all
++
++  useEffect(() => {
++    fetchStats();
++  }, [timeRange]);
++
++  const fetchStats = async () => {
++    setLoading(true);
++    setError(null);
++    
++    try {
++      // Calculate date range based on selected timeRange
++      let startDate = null;
++      const now = new Date();
++      
++      if (timeRange === 'day') {
++        startDate = new Date(now);
++        startDate.setDate(now.getDate() - 1);
++      } else if (timeRange === 'week') {
++        startDate = new Date(now);
++        startDate.setDate(now.getDate() - 7);
++      } else if (timeRange === 'month') {
++        startDate = new Date(now);
++        startDate.setMonth(now.getMonth() - 1);
++      }
++      
++      // Build query params
++      const params = new URLSearchParams();
++      if (startDate) {
++        params.append('startDate', startDate.toISOString());
++      }
++      
++      // Fetch stats
++      const response = await fetch(`/api/token-usage?${params.toString()}`);
++      if (!response.ok) {
++        throw new Error('Failed to fetch token usage statistics');
++      }
++      
++      const data = await response.json();
++      setStats(data);
++    } catch (err) {
++      console.error('Error fetching token stats:', err);
++      setError(err.message);
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  return (
++    <div className="container mx-auto px-4 py-8">
++      <h1 className="text-2xl font-bold mb-6">Token Usage Monitor</h1>
++      
++      <div className="mb-6">
++        <div className="flex space-x-2">
++          <button 
++            onClick={() => setTimeRange('day')}
++            className={`px-4 py-2 rounded ${timeRange === 'day' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
++          >
++            Last 24 Hours
++          </button>
++          <button 
++            onClick={() => setTimeRange('week')}
++            className={`px-4 py-2 rounded ${timeRange === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
++          >
++            Last 7 Days
++          </button>
++          <button 
++            onClick={() => setTimeRange('month')}
++            className={`px-4 py-2 rounded ${timeRange === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
++          >
++            Last 30 Days
++          </button>
++          <button 
++            onClick={() => setTimeRange('all')}
++            className={`px-4 py-2 rounded ${timeRange === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
++          >
++            All Time
++          </button>
++        </div>
++      </div>
++      
++      {loading ? (
++        <div className="flex justify-center py-8">
++          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
++        </div>
++      ) : error ? (
++        <div className="bg-red-50 p-4 rounded text-red-700">
++          {error}
++        </div>
++      ) : stats ? (
++        <div>
++          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
++            <div className="bg-white p-4 rounded shadow">
++              <h3 className="text-lg font-medium text-gray-700">Total Tokens</h3>
++              <p className="text-3xl font-bold">{stats.totalTokens.toLocaleString()}</p>
++              <p className="text-sm text-gray-500">Input: {stats.totalInputTokens.toLocaleString()}</p>
++              <p className="text-sm text-gray-500">Output: {stats.totalOutputTokens.toLocaleString()}</p>
++            </div>
++            
++            <div className="bg-white p-4 rounded shadow">
++              <h3 className="text-lg font-medium text-gray-700">Estimated Cost</h3>
++              <p className="text-3xl font-bold">{stats.estimatedCost?.formatted || '$0.00'}</p>
++              <p className="text-sm text-gray-500">Based on current GPT-4 pricing</p>
++            </div>
++            
++            <div className="bg-white p-4 rounded shadow">
++              <h3 className="text-lg font-medium text-gray-700">Request Count</h3>
++              <p className="text-3xl font-bold">{stats.requestCount}</p>
++              <p className="text-sm text-gray-500">Success Rate: {stats.successRate.toFixed(1)}%</p>
++            </div>
++            
++            <div className="bg-white p-4 rounded shadow">
++              <h3 className="text-lg font-medium text-gray-700">Avg. Per Request</h3>
++              <p className="text-3xl font-bold">{Math.round(stats.averagePerRequest).toLocaleString()}</p>
++              <p className="text-sm text-gray-500">tokens per request</p>
++            </div>
++          </div>
++          
++          <div className="bg-white p-6 rounded shadow">
++            <h3 className="text-lg font-medium mb-4">Token Usage Details</h3>
++            <div className="overflow-x-auto">
++              <table className="min-w-full divide-y divide-gray-200">
++                <thead>
++                  <tr>
++                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metric</th>
++                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
++                  </tr>
++                </thead>
++                <tbody className="bg-white divide-y divide-gray-200">
++                  <tr>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Time Range</td>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
++                      {stats.timeRange.from === 'all time' 
++                        ? 'All time' 
++                        : `${new Date(stats.timeRange.from).toLocaleDateString()} to Present`}
++                    </td>
++                  </tr>
++                  <tr>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Total Input Tokens</td>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{stats.totalInputTokens.toLocaleString()}</td>
++                  </tr>
++                  <tr>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Total Output Tokens</td>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{stats.totalOutputTokens.toLocaleString()}</td>
++                  </tr>
++                  <tr>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Input:Output Ratio</td>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
++                      {stats.totalOutputTokens > 0 
++                        ? (stats.totalInputTokens / stats.totalOutputTokens).toFixed(2) 
++                        : 'N/A'}
++                    </td>
++                  </tr>
++                  <tr>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Successful Requests</td>
++                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
++                      {Math.round(stats.requestCount * (stats.successRate / 100))}
++                    </td>
++                  </tr>
++                </tbody>
++              </table>
++            </div>
++          </div>
++          
++          <div className="mt-6">
++            <button
++              onClick={fetchStats}
++              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
++            >
++              Refresh Data
++            </button>
++          </div>
++        </div>
++      ) : (
++        <div className="bg-yellow-50 p-4 rounded text-yellow-700">
++          No token usage data available.
++        </div>
++      )}
+\ No newline at end of file
+diff --git a/app/api/analyze-bids/route.js b/app/api/analyze-bids/route.js
+index 5061381..a52c766 100644
+--- a/app/api/analyze-bids/route.js
++++ b/app/api/analyze-bids/route.js
+@@ -1,4 +1,5 @@
+ import OpenAI from 'openai';
++import { preprocessBidDocuments } from '../../utils/simpleBidPreprocessor';
+ 
+ const openai = new OpenAI({
+   apiKey: process.env.OPENAI_API_KEY,
+@@ -6,72 +7,96 @@ const openai = new OpenAI({
+ 
+ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+ 
++// Estimate tokens from character count
++function estimateTokens(text) {
++  const charCount = typeof text === 'string' ? text.length : text;
++  // GPT models average ~4 chars per token for English text
++  return Math.ceil(charCount / 4);
++}
++
+ async function analyzeWithRetry(prompt, maxRetries = 3) {
+   for (let attempt = 0; attempt < maxRetries; attempt++) {
+     try {
++      console.log(`Attempt ${attempt + 1} of ${maxRetries}`);
+       const completion = await openai.chat.completions.create({
+         model: "gpt-4-turbo-preview",
+         messages: [
+           {
+             role: "system",
+-            content: "You are a construction bid analysis expert. Provide analysis in the exact JSON format specified, with no additional text."
++            content: `You are a construction bid analysis expert analyzing multiple bid documents.
++
++IMPORTANT INSTRUCTIONS ABOUT COSTS:
++1. Construction projects typically cost in the MILLIONS of dollars.
++2. When you see a value like "$82,300,000" this means 82 million, 300 thousand dollars.
++3. Be sure to include the full dollar amounts in your analysis (don't round millions to thousands).
++4. Pay special attention to the "IMPORTANT COST INFORMATION" section if present in the documents.
++5. If key cost components (materials, labor, overhead) aren't explicitly stated, estimate them based on typical construction ratios.
++
++Your response must be in the exact JSON format specified in the user's message.`
+           },
+           {
+             role: "user",
+             content: prompt,
+           }
+         ],
+-        temperature: 0.1, // Lower temperature for more consistent structured output
++        temperature: 0.1,
+         max_tokens: 4000,
+-        response_format: { type: "json_object" } // Enforce JSON response
++        response_format: { type: "json_object" }
+       });
+ 
+       return JSON.parse(completion.choices[0].message.content);
+     } catch (error) {
++      console.error('OpenAI API error:', error.message);
++      
+       if (error.status === 429) {
+-        const retryAfter = 60;
++        const retryAfter = error.headers?.get('retry-after') || 60;
+         console.log(`Rate limited. Waiting ${retryAfter} seconds before retry ${attempt + 1}/${maxRetries}`);
+         await sleep(retryAfter * 1000);
+         continue;
+       }
++      
+       throw error;
+     }
+   }
+   throw new Error('Max retries exceeded');
+ }
+ 
+-function truncateContent(content, maxLength = 15000) {
+-  if (content.length > maxLength) {
+-    return content.substring(0, maxLength) + "\n...(truncated for length)";
+-  }
+-  return content;
+-}
+-
+ export async function POST(request) {
+   try {
+     const body = await request.json();
+     const { fileContents } = body;
+-
+-    const truncatedContents = fileContents.map(file => ({
+-      ...file,
+-      content: truncateContent(file.content)
+-    }));
+-
++    
++    // Log original content size
++    const totalOriginalChars = fileContents.reduce((sum, file) => sum + file.content.length, 0);
++    const estOriginalTokens = estimateTokens(totalOriginalChars);
++    console.log(`Original content: ~${estOriginalTokens} tokens across ${fileContents.length} files`);
++    
++    // Preprocess the bid documents
++    const maxContentLength = 10000; // Characters per document
++    const preprocessedContents = preprocessBidDocuments(fileContents, maxContentLength);
++    
++    // Log processed content size
++    const totalProcessedChars = preprocessedContents.reduce((sum, file) => sum + file.content.length, 0);
++    const estProcessedTokens = estimateTokens(totalProcessedChars);
++    const tokenReduction = ((estOriginalTokens - estProcessedTokens) / estOriginalTokens * 100).toFixed(1);
++    
++    console.log(`Processed content: ~${estProcessedTokens} tokens (${tokenReduction}% reduction)`);
++    
+     const prompt = `Analyze these construction bids and provide a comparison in the following exact JSON format:
+ {
+   "summary": {
+     "recommendedBid": "string - name of recommended bid",
+-    "totalCost": "number - cost of recommended bid",
++    "totalCost": number - cost of recommended bid in dollars (DO NOT format with commas or $ signs),
+     "reasoning": "string - brief 1-2 sentence explanation"
+   },
+   "bidComparison": [
+     {
+-      "bidder": "string - name from filename",
+-      "totalCost": "number",
++      "bidder": "string - name from filename or document",
++      "totalCost": number - total bid amount in dollars (DO NOT format with commas or $ signs),
+       "keyComponents": {
+-        "materials": "number - estimated materials cost",
+-        "labor": "number - estimated labor cost",
+-        "overhead": "number - estimated overhead"
++        "materials": number - estimated materials cost in dollars,
++        "labor": number - estimated labor cost in dollars,
++        "overhead": number - estimated overhead in dollars
+       }
+     }
+   ],
+@@ -83,13 +108,20 @@ export async function POST(request) {
+   ]
+ }
+ 
++Remember: Construction projects typically cost in the MILLIONS of dollars. Be careful not to misinterpret cost figures.
++
+ Bid documents to analyze:
+ 
+-${truncatedContents.map((file, index) => `
++${preprocessedContents.map((file, index) => `
+ --- BID DOCUMENT ${index + 1}: ${file.name} ---
+ ${file.content}
+ `).join('\n\n')}`;
+ 
++    // Log final prompt size
++    const promptTokens = estimateTokens(prompt);
++    console.log(`Final prompt: ~${promptTokens} tokens`);
++    
++    // Send to OpenAI for analysis
+     const analysis = await analyzeWithRetry(prompt);
+     return Response.json(analysis);
+ 
+diff --git a/app/api/export-bids/route.js b/app/api/export-bids/route.js
+index e51450f..4c55104 100644
+--- a/app/api/export-bids/route.js
++++ b/app/api/export-bids/route.js
+@@ -26,6 +26,7 @@ export async function POST(request) {
+           <div class="section">
+             <h2>Summary</h2>
+             <p><strong>Recommended Bid:</strong> ${results.summary.recommendedBid}</p>
++            <p><strong>Total Cost:</strong> $${results.summary.totalCost?.toLocaleString()}</p>
+             <p><strong>Reasoning:</strong> ${results.summary.reasoning}</p>
+           </div>
+ 
+@@ -35,11 +36,17 @@ export async function POST(request) {
+               <tr>
+                 <th>Bidder</th>
+                 <th>Total Cost</th>
++                <th>Materials</th>
++                <th>Labor</th>
++                <th>Overhead</th>
+               </tr>
+-              ${results.costAnalysis.bidComparison.map(bid => `
++              ${results.bidComparison.map(bid => `
+                 <tr>
+                   <td>${bid.bidder}</td>
+-                  <td>$${bid.totalCost.toLocaleString()}</td>
++                  <td>$${bid.totalCost?.toLocaleString()}</td>
++                  <td>$${bid.keyComponents?.materials?.toLocaleString() || 'N/A'}</td>
++                  <td>$${bid.keyComponents?.labor?.toLocaleString() || 'N/A'}</td>
++                  <td>$${bid.keyComponents?.overhead?.toLocaleString() || 'N/A'}</td>
+                 </tr>
+               `).join('')}
+             </table>
+@@ -47,10 +54,9 @@ export async function POST(request) {
+ 
+           <div class="section">
+             <h2>Risk Assessment</h2>
+-            <p><strong>Risk Level:</strong> ${results.riskAssessment.level}</p>
+             <h3>Risk Factors:</h3>
+             <ul>
+-              ${results.riskAssessment.factors.map(factor => `
++              ${results.risks.map(factor => `
+                 <li>${factor}</li>
+               `).join('')}
+             </ul>
+diff --git a/app/api/token-usage/route.js b/app/api/token-usage/route.js
+new file mode 100644
+index 0000000..e6f6d9b
+--- /dev/null
++++ b/app/api/token-usage/route.js
+@@ -0,0 +1,48 @@
++import { getTokenUsageStats, estimateGPT4Cost } from '../../utils/tokenTracker';
++
++// This route provides token usage statistics
++export async function GET(request) {
++  try {
++    // Parse query parameters
++    const { searchParams } = new URL(request.url);
++    const startDate = searchParams.get('startDate');
++    const endDate = searchParams.get('endDate');
++    const model = searchParams.get('model');
++    const endpoint = searchParams.get('endpoint');
++    
++    // Get token usage statistics
++    const stats = getTokenUsageStats({
++      startDate,
++      endDate,
++      model,
++      endpoint
++    });
++    
++    // Add cost estimation
++    const estimatedCost = estimateGPT4Cost(stats.totalInputTokens, stats.totalOutputTokens);
++    
++    return Response.json({
++      ...stats,
++      estimatedCost: {
++        usd: estimatedCost.toFixed(4),
++        formatted: `$${estimatedCost.toFixed(2)}`
++      },
++      filters: {
++        startDate,
++        endDate,
++        model,
++        endpoint
++      },
++      timeRange: {
++        from: startDate || 'all time',
++        to: endDate || 'present'
++      }
++    });
++  } catch (error) {
++    console.error('Token usage stats error:', error);
++    return Response.json({ 
++      error: 'Failed to get token usage statistics',
++      message: error.message
++    }, { status: 500 });
++  }
++}
+\ No newline at end of file
+diff --git a/app/features/BidUpload.jsx b/app/features/BidUpload.jsx
+index c6169bc..5f4a161 100644
+--- a/app/features/BidUpload.jsx
++++ b/app/features/BidUpload.jsx
+@@ -2,6 +2,19 @@
+ 
+ import React, { useState } from 'react';
+ import { Upload, FileText, Trash2 } from 'lucide-react';
++import TokenReductionIndicator from './TokenReductionIndicator';
++
++// Format large numbers with commas and abbreviate if necessary
++function formatCurrency(amount) {
++  if (!amount && amount !== 0) return 'N/A';
++  
++  // Check if we should abbreviate (for millions)
++  if (amount >= 1000000) {
++    return `$${(amount / 1000000).toFixed(1)}M`;
++  } else {
++    return `$${amount.toLocaleString()}`;
++  }
++}
+ 
+ const BidUpload = () => {
+   const [files, setFiles] = useState([]);
+@@ -12,10 +25,14 @@ const BidUpload = () => {
+   const handleFileUpload = async (e) => {
+     const newFiles = Array.from(e.target.files);
+     setFiles(prev => [...prev, ...newFiles]);
++    // Clear results when new files are added
++    setResults(null);
+   };
+ 
+   const removeFile = (index) => {
+     setFiles(files.filter((_, i) => i !== index));
++    // Clear results when files are removed
++    setResults(null);
+   };
+ 
+   const analyzeBids = async () => {
+@@ -52,16 +69,7 @@ const BidUpload = () => {
+       setResults(analysisResults);
+     } catch (error) {
+       console.error('Error:', error);
+-      try {
+-        const errorResponse = await error.response?.json();
+-        if (errorResponse?.retryIn) {
+-          setError(`Analysis temporarily unavailable. Please try again in ${errorResponse.retryIn} seconds.`);
+-        } else {
+-          setError(errorResponse?.message || 'Failed to analyze bids. Please try again.');
+-        }
+-      } catch (e) {
+-        setError('Failed to analyze bids. Please try again.');
+-      }
++      setError(error.message || 'Failed to analyze bids. Please try again.');
+     } finally {
+       setProcessing(false);
+     }
+@@ -73,7 +81,7 @@ const BidUpload = () => {
+         <input
+           type="file"
+           multiple
+-          accept=".pdf,.csv,.xlsx,.xls"
++          accept=".pdf,.txt,.doc,.docx"
+           onChange={handleFileUpload}
+           className="hidden"
+           id="file-upload"
+@@ -87,7 +95,7 @@ const BidUpload = () => {
+             Upload Bid Documents
+           </span>
+           <span className="mt-1 text-xs text-gray-400">
+-            Upload PDFs, Excel files, or CSVs
++            Upload PDFs, Word documents, or text files
+           </span>
+         </label>
+       </div>
+@@ -121,6 +129,9 @@ const BidUpload = () => {
+               </div>
+             ))}
+           </div>
++          
++          {/* Token Reduction Indicator */}
++          <TokenReductionIndicator processing={processing} />
+         </div>
+       )}
+ 
+@@ -131,112 +142,65 @@ const BidUpload = () => {
+       )}
+ 
+       {results && (
+-        <>
+-          <div className="mt-6 p-4 bg-white rounded-lg shadow">
+-            <h3 className="text-lg font-semibold mb-4">Analysis Results</h3>
+-            
+-            <div className="space-y-6">
+-              {/* Summary Section */}
+-              <div className="bg-blue-50 p-4 rounded-lg">
+-                <h4 className="font-medium text-blue-900">Recommended Bid</h4>
+-                <p className="mt-2 text-blue-800">{results.summary.recommendedBid}</p>
+-                <p className="mt-2 text-blue-800">${results.summary.totalCost?.toLocaleString()}</p>
+-                <p className="mt-1 text-sm text-blue-700">{results.summary.reasoning}</p>
+-              </div>
++        <div className="mt-6 p-4 bg-white rounded-lg shadow">
++          <h3 className="text-lg font-semibold mb-4">Analysis Results</h3>
++          
++          <div className="space-y-6">
++            {/* Summary Section */}
++            <div className="bg-blue-50 p-4 rounded-lg">
++              <h4 className="font-medium text-blue-900">Recommended Bid</h4>
++              <p className="mt-2 text-blue-800">{results.summary.recommendedBid}</p>
++              <p className="mt-2 text-blue-800">{formatCurrency(results.summary.totalCost)}</p>
++              <p className="mt-1 text-sm text-blue-700">{results.summary.reasoning}</p>
++            </div>
+ 
+-              {/* Bid Comparison */}
+-              <div>
+-                <h4 className="font-medium mb-2">Cost Comparison</h4>
+-                <div className="space-y-2">
+-                  {results.bidComparison?.map((bid, index) => (
+-                    <div key={index} className="p-3 bg-gray-50 rounded">
+-                      <div className="flex justify-between mb-2">
+-                        <span className="font-medium">{bid.bidder}</span>
+-                        <span>${bid.totalCost?.toLocaleString()}</span>
++            {/* Bid Comparison */}
++            <div>
++              <h4 className="font-medium mb-2">Cost Comparison</h4>
++              <div className="space-y-2">
++                {results.bidComparison?.map((bid, index) => (
++                  <div key={index} className="p-3 bg-gray-50 rounded">
++                    <div className="flex justify-between mb-2">
++                      <span className="font-medium">{bid.bidder}</span>
++                      <span>{formatCurrency(bid.totalCost)}</span>
++                    </div>
++                    <div className="grid grid-cols-3 gap-2 text-sm text-gray-600">
++                      <div>
++                        Materials: {formatCurrency(bid.keyComponents?.materials)}
++                      </div>
++                      <div>
++                        Labor: {formatCurrency(bid.keyComponents?.labor)}
+                       </div>
+-                      <div className="grid grid-cols-3 gap-2 text-sm text-gray-600">
+-                        <div>
+-                          Materials: ${bid.keyComponents?.materials?.toLocaleString()}
+-                        </div>
+-                        <div>
+-                          Labor: ${bid.keyComponents?.labor?.toLocaleString()}
+-                        </div>
+-                        <div>
+-                          Overhead: ${bid.keyComponents?.overhead?.toLocaleString()}
+-                        </div>
++                      <div>
++                        Overhead: {formatCurrency(bid.keyComponents?.overhead)}
+                       </div>
+                     </div>
+-                  ))}
+-                </div>
++                  </div>
++                ))}
+               </div>
++            </div>
+ 
+-              {/* Risks */}
+-              <div className="bg-yellow-50 p-4 rounded-lg">
+-                <h4 className="font-medium text-yellow-900">Risk Factors</h4>
+-                <ul className="mt-2 space-y-1">
+-                  {results.risks?.map((risk, index) => (
+-                    <li key={index} className="text-sm text-yellow-700">• {risk}</li>
+-                  ))}
+-                </ul>
+-              </div>
++            {/* Risks */}
++            <div className="bg-yellow-50 p-4 rounded-lg">
++              <h4 className="font-medium text-yellow-900">Risk Factors</h4>
++              <ul className="mt-2 space-y-1">
++                {results.risks?.map((risk, index) => (
++                  <li key={index} className="text-sm text-yellow-700">• {risk}</li>
++                ))}
++              </ul>
++            </div>
+ 
+-              {/* Recommendations */}
+-              <div>
+-                <h4 className="font-medium mb-2">Recommendations</h4>
+-                <ul className="space-y-1">
+-                  {results.recommendations?.map((rec, index) => (
+-                    <li key={index} className="text-sm">• {rec}</li>
+-                  ))}
+-                </ul>
+-              </div>
++            {/* Recommendations */}
++            <div>
++              <h4 className="font-medium mb-2">Recommendations</h4>
++              <ul className="space-y-1">
++                {results.recommendations?.map((rec, index) => (
++                  <li key={index} className="text-sm">• {rec}</li>
++                ))}
++              </ul>
+             </div>
+           </div>
+-          <div className="mt-4 flex justify-end">
+-            <button
+-              onClick={() => {
+-                const formattedAnalysis = `
+-Bid Analysis Report
+-==================
+-
+-Recommended Bid: ${results.summary.recommendedBid}
+-Total Cost: $${results.summary.totalCost?.toLocaleString()}
+-Reasoning: ${results.summary.reasoning}
+-
+-Bid Comparison
+--------------
+-${results.bidComparison?.map(bid => `
+-${bid.bidder}:
+-- Total Cost: $${bid.totalCost?.toLocaleString()}
+-- Materials: $${bid.keyComponents?.materials?.toLocaleString()}
+-- Labor: $${bid.keyComponents?.labor?.toLocaleString()}
+-- Overhead: $${bid.keyComponents?.overhead?.toLocaleString()}
+-`).join('\n')}
+-
+-Risk Factors
+------------
+-${results.risks?.map(risk => `- ${risk}`).join('\n')}
+-
+-Recommendations
+--------------
+-${results.recommendations?.map(rec => `- ${rec}`).join('\n')}
+-`;
+-
+-                const blob = new Blob([formattedAnalysis], { type: 'text/plain' });
+-                const url = window.URL.createObjectURL(blob);
+-                const a = document.createElement('a');
+-                a.href = url;
+-                a.download = 'bid-analysis.txt';
+-                document.body.appendChild(a);
+-                a.click();
+-                window.URL.revokeObjectURL(url);
+-                document.body.removeChild(a);
+-              }}
+-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+-            >
+-              Export Analysis
+-            </button>
+-          </div>
+-        </>
++        </div>
+       )}
+     </div>
+   );
+diff --git a/app/features/ExportResults.jsx b/app/features/ExportResults.jsx
+index 92a31d4..ba7fdb5 100644
+--- a/app/features/ExportResults.jsx
++++ b/app/features/ExportResults.jsx
+@@ -18,7 +18,7 @@ const ExportResults = ({ results }) => {
+       [''],
+       ['Cost Comparison'],
+       ['Bidder', 'Total Cost'],
+-      ...results.costAnalysis.bidComparison.map(bid => 
++      ...results.bidComparison.map(bid => 
+         [bid.bidder, bid.totalCost]
+       )
+     ]);
+@@ -27,10 +27,8 @@ const ExportResults = ({ results }) => {
+     const riskSheet = workbook.addWorksheet('Risk Assessment');
+     riskSheet.addRows([
+       ['Risk Assessment'],
+-      ['Risk Level', results.riskAssessment.level],
+-      [''],
+       ['Risk Factors'],
+-      ...results.riskAssessment.factors.map(factor => [factor])
++      ...results.risks.map(factor => [factor])
+     ]);
+ 
+     // Recommendations Sheet
+@@ -53,7 +51,7 @@ const ExportResults = ({ results }) => {
+ 
+   const exportToPDF = async () => {
+     try {
+-      const response = await fetch('/api/export-pdf', {
++      const response = await fetch('/api/export-bids', {  // Fixed path to match your route file
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+diff --git a/app/features/PreprocessingPreview.jsx b/app/features/PreprocessingPreview.jsx
+new file mode 100644
+index 0000000..247a3b0
+--- /dev/null
++++ b/app/features/PreprocessingPreview.jsx
+@@ -0,0 +1,159 @@
++'use client';
++
++import React, { useState } from 'react';
++import { preprocessBidDocuments } from '../utils/bidPreprocessor';
++
++const PreprocessingPreview = ({ files }) => {
++  const [preprocessingResults, setPreprocessingResults] = useState(null);
++  const [showDetails, setShowDetails] = useState(false);
++
++ Convert files to format needed by preprocessor
++      const fileContents = await Promise.all(
++        files.map(async (file) => {
++          const text = await file.text();
++          return {
++            name: file.name,
++            content: text
++          };
++        })
++      );
++
++      // Run preprocessing
++      const preprocessed = preprocessBidDocuments(fileContents, {
++        maxContentLength: 12000,
++        removeBoilerplate: true,
++        extractKeyInfo: true,
++        summarizeLongSections: true
++      });
++
++      // Calculate statistics
++      const results = preprocessed.map((processed, index) => {
++        const originalSize = processed.originalSize;
++        const processedSize = processed.content.length;
++        const reduction = originalSize - processedSize;
++        const reductionPercent = ((reduction / originalSize) * 100).toFixed(1);
++        
++        // Estimate tokens (4 chars per token is a rough estimate)
++        const originalTokens = Math.ceil(originalSize / 4);
++        const processedTokens = Math.ceil(processedSize / 4);
++        const tokenReduction = originalTokens - processedTokens;
++        
++        return {
++          name: processed.name,
++          originalSize,
++          processedSize,
++          reduction,
++          reductionPercent,
++          originalTokens,
++          processedTokens,
++          tokenReduction
++        };
++      });
++
++      // Calculate totals
++      const totalOriginalSize = results.reduce((sum, r) => sum + r.originalSize, 0);
++      const totalProcessedSize = results.reduce((sum, r) => sum + r.processedSize, 0);
++      const totalReduction = totalOriginalSize - totalProcessedSize;
++      const totalReductionPercent = ((totalReduction / totalOriginalSize) * 100).toFixed(1);
++      const totalOriginalTokens = results.reduce((sum, r) => sum + r.originalTokens, 0);
++      const totalProcessedTokens = results.reduce((sum, r) => sum + r.processedTokens, 0);
++      
++      setPreprocessingResults({
++        files: results,
++        totals: {
++          originalSize: totalOriginalSize,
++          processedSize: totalProcessedSize,
++          reduction: totalReduction,
++          reductionPercent: totalReductionPercent,
++          originalTokens: totalOriginalTokens,
++          processedTokens: totalProcessedTokens,
++          tokenReduction: totalOriginalTokens - totalProcessedTokens
++        }
++      });
++    } catch (error) {
++      console.error('Preprocessing preview error:', error);
++    }
++  };
++
++  return (
++    <div className="mt-4">
++      {!preprocessingResults ? (
++        <button
++          onClick={previewPreprocessing}
++          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
++          disabled={!files || files.length === 0}
++        >
++          Preview Token Optimization
++        </button>
++      ) : (
++        <div className="bg-gray-50 p-4 rounded-lg">
++          <h4 className="text-lg font-medium mb-2">Token Optimization Preview</h4>
++          
++          <div className="bg-white p-3 rounded border mb-4">
++            <div className="flex justify-between items-center">
++              <div>
++                <p className="font-medium">Total Reduction:</p>
++                <p className="text-2xl font-bold text-green-600">
++                  {preprocessingResults.totals.reductionPercent}% 
++                  <span className="text-sm font-normal ml-1 text-gray-500">
++                    ({preprocessingResults.totals.tokenReduction.toLocaleString()} tokens saved)
++                  </span>
++                </p>
++              </div>
++              <div className="text-right">
++                <p className="text-sm text-gray-500">Before: {preprocessingResults.totals.originalTokens.toLocaleString()} tokens</p>
++                <p className="text-sm text-gray-500">After: {preprocessingResults.totals.processedTokens.toLocaleString()} tokens</p>
++              </div>
++            </div>
++          </div>
++          
++          <button
++            onClick={() => setShowDetails(!showDetails)}
++            className="text-blue-600 hover:text-blue-800 text-sm mb-2"
++          >
++            {showDetails ? 'Hide Details' : 'Show Details'}
++          </button>
++          
++          {showDetails && (
++            <div className="overflow-x-auto">
++              <table className="w-full text-sm">
++                <thead>
++                  <tr className="bg-gray-100">
++                    <th className="px-4 py-2 text-left">File</th>
++                    <th className="px-4 py-2 text-right">Original Size</th>
++                    <th className="px-4 py-2 text-right">Processed Size</th>
++                    <th className="px-4 py-2 text-right">Reduction</th>
++                    <th className="px-4 py-2 text-right">Tokens Saved</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  {preprocessingResults.files.map((result, index) => (
++                    <tr key={index} className="border-b">
++                      <td className="px-4 py-2 font-medium truncate max-w-xs">
++                        {result.name}
++                      </td>
++                      <td className="px-4 py-2 text-right">
++                        {result.originalSize.toLocaleString()} chars
++                      </td>
++                      <td className="px-4 py-2 text-right">
++                        {result.processedSize.toLocaleString()} chars
++                      </td>
++                      <td className="px-4 py-2 text-right font-medium">
++                        {result.reductionPercent}%
++                      </td>
++                      <td className="px-4 py-2 text-right text-green-600">
++                        {result.tokenReduction.toLocaleString()}
++                      </td>
++                    </tr>
++                  ))}
++                </tbody>
++              </table>
++            </div>
++          )}
++        </div>
++      )}
++    </div>
++  );
++};
++
++export default PreprocessingPreview;
+\ No newline at end of file
+diff --git a/app/features/TokenReductionIndicator.jsx b/app/features/TokenReductionIndicator.jsx
+new file mode 100644
+index 0000000..247a79e
+--- /dev/null
++++ b/app/features/TokenReductionIndicator.jsx
+@@ -0,0 +1,19 @@
++'use client';
++
++import React from 'react';
++
++const TokenReductionIndicator = ({ processing }) => {
++  return (
++    <div className="mt-2 text-sm text-gray-600 flex items-center">
++      <div className="flex-shrink-0 mr-2">
++        <div className={`h-2 w-2 rounded-full ${processing ? 'bg-blue-500 animate-pulse' : 'bg-green-500'}`}></div>
++      </div>
++      <div>
++        Token optimization active {processing ? '(processing...)' : '(ready)'} - 
++        <span className="text-green-600 font-medium"> ~50-70% token reduction</span>
++      </div>
++    </div>
++  );
++};
++
++export default TokenReductionIndicator;
+\ No newline at end of file
+diff --git a/app/page.jsx b/app/page.jsx
+index 53ed4b0..f97f793 100644
+--- a/app/page.jsx
++++ b/app/page.jsx
+@@ -7,7 +7,13 @@ export default function Home() {
+     <main className="min-h-screen p-8">
+       <div className="max-w-6xl mx-auto">
+         <h1 className="text-3xl font-bold mb-8 text-center">Bid Leveling Assistant</h1>
++        <p className="text-gray-600 text-center mb-8">
++          Upload your construction bid documents and get AI-powered analysis with automatic token optimization.
++        </p>
+         <BidUpload />
++        <footer className="mt-12 text-center text-sm text-gray-500">
++          <p>This application includes automatic token optimization to reduce API costs.</p>
++        </footer>
+       </div>
+     </main>
+   );
+diff --git a/app/utils/bidPreprocessor.js b/app/utils/bidPreprocessor.js
+new file mode 100644
+index 0000000..bf52a4d
+--- /dev/null
++++ b/app/utils/bidPreprocessor.js
+@@ -0,0 +1,209 @@
++/**
++ * Bid document preprocessor to reduce token usage before sending to OpenAI
++ */
++
++// Common boilerplate text patterns to remove
++const BOILERPLATE_PATTERNS = [
++    /This document is confidential and proprietary\.(.*?)\./is,
++    /Copyright © \d{4}(.*?)\. All rights reserved\./is,
++    /For internal use only\./i,
++    /Please read the terms and conditions\./i,
++    /Disclaimer:(.*?)(?:\n\n|\n|$)/is,
++    /www\.[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/g,
++    /Page \d+ of \d+/g,
++    /Document ID: [A-Z0-9-]+/g,
++    /Version: \d+\.\d+/g
++  ];
++  
++  /**
++   * Main preprocessing function to reduce token usage
++   * @param {Array} fileContents Array of {name, content} objects
++   * @param {Object} options Preprocessing options
++   * @returns {Array} Processed file contents
++   */
++  export function preprocessBidDocuments(fileContents, options = {}) {
++    const defaults = {
++      maxContentLength: 10000, // Characters per document
++      removeBoilerplate: true,
++      extractKeyInfo: true,
++      summarizeLongSections: true
++    };
++  
++    const settings = { ...defaults, ...options };
++    
++    return fileContents.map(file => {
++      let processedContent = file.content;
++      const fileExt = getFileExtension(file.name).toLowerCase();
++      const fileName = file.name;
++      
++      // Track token reduction
++      const originalLength = processedContent.length;
++      
++      // Remove common boilerplate text
++      if (settings.removeBoilerplate) {
++        processedContent = removeBoilerplateText(processedContent);
++      }
++      
++      // Extract key information based on file type
++      if (settings.extractKeyInfo) {
++        processedContent = extractKeyInformation(processedContent, fileExt, fileName);
++      }
++      
++      // Summarize long sections
++      if (settings.summarizeLongSections) {
++        processedContent = summarizeLongContent(processedContent, settings.maxContentLength);
++      }
++      
++      // Always ensure content is within maximum length
++      if (processedContent.length > settings.maxContentLength) {
++        processedContent = truncateWithContext(processedContent, settings.maxContentLength);
++      }
++      
++      // Log reduction statistics
++      const newLength = processedContent.length;
++      const reductionPercent = ((originalLength - newLength) / originalLength * 100).toFixed(1);
++      
++      console.log(`Preprocessed ${file.name}: ${originalLength} → ${newLength} chars (${reductionPercent}% reduction)`);
++      
++      return {
++        name: file.name,
++        content: processedContent,
++        originalSize: originalLength
++      };
++    });
++  }
++  
++  /**
++   * Get file extension from filename
++   */
++  function getFileExtension(filename) {
++    return filename.split('.').pop();
++  }
++  
++  /**
++   * Remove common boilerplate text
++   */
++  function removeBoilerplateText(content) {
++    let cleaned = content;
++    
++    // Apply each boilerplate pattern
++    BOILERPLATE_PATTERNS.forEach(pattern => {
++      cleaned = cleaned.replace(pattern, '');
++    });
++    
++    // Remove excessive whitespace
++    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
++    cleaned = cleaned.replace(/\s{2,}/g, ' ');
++    
++    return cleaned.trim();
++  }
++  
++  /**
++   * Extract key information based on file type
++   */
++  function extractKeyInformation(content, fileExt, fileName) {
++    // For PDFs and scanned documents that might have been converted to text
++    if (fileName.toLowerCase().includes('bid') || fileName.toLowerCase().includes('proposal')) {
++      // Extract key sections by looking for common headers
++      let keyInfo = '';
++      
++      // Look for pricing sections
++      const pricingMatch = content.match(/(?:Price|Pricing|Cost|Costs|Budget|Financial)(.*?)(?:\n\s*\n|\n\s*$|$)/is);
++      if (pricingMatch) {
++        keyInfo += `PRICING INFORMATION:\n${pricingMatch[0]}\n\n`;
++      }
++      
++      // Look for timeline/schedule
++      const timelineMatch = content.match(/(?:Timeline|Schedule|Timeframe|Deadline|Milestones)(.*?)(?:\n\s*\n|\n\s*$|$)/is);
++      if (timelineMatch) {
++        keyInfo += `TIMELINE INFORMATION:\n${timelineMatch[0]}\n\n`;
++      }
++      
++      // Look for materials/resources
++      const materialsMatch = content.match(/(?:Materials|Resources|Equipment|Supplies)(.*?)(?:\n\s*\n|\n\s*$|$)/is);
++      if (materialsMatch) {
++        keyInfo += `MATERIALS INFORMATION:\n${materialsMatch[0]}\n\n`;
++      }
++      
++      // Look for labor information
++      const laborMatch = content.match(/(?:Labor|Workforce|Personnel|Staffing|Manpower)(.*?)(?:\n\s*\n|\n\s*$|$)/is);
++      if (laborMatch) {
++        keyInfo += `LABOR INFORMATION:\n${laborMatch[0]}\n\n`;
++      }
++      
++      // If we found key information, return it with some context, otherwise return original content
++      if (keyInfo.length > 0) {
++        return `BID DOCUMENT EXTRACTION FROM: ${fileName}\n\n${keyInfo}\nADDITIONAL CONTEXT: The original document contained ${content.length} characters. This is an extract of the key pricing, timeline, materials, and labor information.`;
++      }
++    }
++    
++    // For spreadsheets and other structured documents - just return original for now
++    // In a more advanced system, you might parse these specifically
++    return content;
++  }
++  
++  /**
++   * Summarize long content sections to reduce tokens
++   */
++  function summarizeLongContent(content, maxLength) {
++    // If content is already short enough, return it as is
++    if (content.length <= maxLength) {
++      return content;
++    }
++    
++    // Split into paragraphs
++    const paragraphs = content.split(/\n\s*\n/);
++    
++    // If we have many paragraphs, keep only the most important ones
++    if (paragraphs.length > 15) {
++      // Keep introduction (first 2 paragraphs)
++      const intro = paragraphs.slice(0, 2);
++      
++      // Look for key paragraphs containing important terms
++      const keyTerms = ['price', 'cost', 'bid', 'timeline', 'schedule', 'materials', 'labor', 'total', 'proposal', 'offer', 'payment', 'quality', 'warranty'];
++      
++      const keyParagraphs = paragraphs.filter(para => {
++        const paraLower = para.toLowerCase();
++        return keyTerms.some(term => paraLower.includes(term));
++      });
++      
++      // Keep conclusion (last paragraph)
++      const conclusion = paragraphs.slice(-1);
++      
++      // Combine the selected paragraphs
++      const summaryContent = [
++        ...intro,
++        ...(keyParagraphs.length > 0 ? keyParagraphs : paragraphs.slice(2, 5)),
++        ...conclusion
++      ].join('\n\n');
++      
++      // Note the summarization performed
++      return summaryContent + `\n\n(Note: This is a summarized version of the original document which contained ${paragraphs.length} paragraphs. Only the introduction, key information, and conclusion are included.)`;
++    }
++    
++    // If not many paragraphs, just truncate with context
++    return truncateWithContext(content, maxLength);
++  }
++  
++  /**
++   * Truncate content while preserving context
++   */
++  function truncateWithContext(content, maxLength) {
++    // If already under max length, return as is
++    if (content.length <= maxLength) {
++      return content;
++    }
++    
++    // Reserve some space for the truncation notice
++    const reservedSpace = 120;
++    const effectiveMaxLength = maxLength - reservedSpace;
++    
++    // Take first part
++    const firstPart = content.substring(0, Math.floor(effectiveMaxLength * 0.65));
++    
++    // Take last part
++    const lastPart = content.substring(content.length - Math.floor(effectiveMaxLength * 0.35));
++    
++    // Combine with truncation notice
++    return `${firstPart}\n\n[...TRUNCATED... (${content.length - effectiveMaxLength} characters removed to reduce token count)...]\n\n${lastPart}`;
++  }
+\ No newline at end of file
+diff --git a/app/utils/simpleBidPreprocessor.js b/app/utils/simpleBidPreprocessor.js
+new file mode 100644
+index 0000000..93b6b7b
+--- /dev/null
++++ b/app/utils/simpleBidPreprocessor.js
+@@ -0,0 +1,143 @@
++/**
++ * Simple bid document preprocessor with improved cost data handling
++ */
++
++/**
++ * Preprocess bid documents to reduce token usage while preserving cost information
++ * @param {Array} fileContents Array of {name, content} objects
++ * @param {number} maxLength Maximum content length per document
++ * @returns {Array} Processed file contents
++ */
++export function preprocessBidDocuments(fileContents, maxLength = 10000) {
++    return fileContents.map(file => {
++      let processedContent = file.content;
++      const originalLength = processedContent.length;
++      
++      // First, preserve important cost information
++      const costData = extractCostInformation(processedContent);
++      
++      // Basic removal of common boilerplate text
++      processedContent = removeBoilerplate(processedContent);
++      
++      // Intelligent truncation that preserves cost data
++      if (processedContent.length > maxLength) {
++        processedContent = truncateWithContext(processedContent, maxLength, costData);
++      }
++      
++      // Log reduction statistics
++      const newLength = processedContent.length;
++      const reductionPercent = ((originalLength - newLength) / originalLength * 100).toFixed(1);
++      
++      console.log(`Preprocessed ${file.name}: ${originalLength} → ${newLength} chars (${reductionPercent}% reduction)`);
++      
++      return {
++        name: file.name,
++        content: processedContent,
++        originalSize: originalLength
++      };
++    });
++  }
++  
++  /**
++   * Extract cost information from the content
++   */
++  function extractCostInformation(content) {
++    const costData = {
++      totalCost: null,
++      costBreakdown: []
++    };
++    
++    // Look for total project cost
++    const totalCostRegex = /Total Project( Estimated)? Cost:?\s*\$?([\d,]+(\.\d+)?)/i;
++    const totalCostMatch = content.match(totalCostRegex);
++    
++    if (totalCostMatch && totalCostMatch[2]) {
++      costData.totalCost = totalCostMatch[0];
++    }
++    
++    // Look for any currency values with regex 
++    const currencyRegex = /\$?[\d,]+(\.\d+)?([ \t]+million| million dollars| dollars)?/g;
++    let match;
++    
++    while ((match = currencyRegex.exec(content)) !== null) {
++      const context = content.substring(
++        Math.max(0, match.index - 30), 
++        Math.min(content.length, match.index + match[0].length + 30)
++      );
++      
++      costData.costBreakdown.push({
++        value: match[0],
++        context: context
++      });
++    }
++    
++    return costData;
++  }
++  
++  /**
++   * Remove common boilerplate text
++   */
++  function removeBoilerplate(content) {
++    let cleaned = content;
++    
++    // Common patterns to remove
++    const patterns = [
++      /This document is confidential and proprietary\.(.*?)\./is,
++      /Copyright © \d{4}(.*?)\. All rights reserved\./is,
++      /For internal use only\./i,
++      /Please read the terms and conditions\./i,
++      /Disclaimer:(.*?)(?:\n\n|\n|$)/is,
++      /www\.[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/g,
++      /Page \d+ of \d+/g
++    ];
++    
++    // Apply each pattern
++    patterns.forEach(pattern => {
++      cleaned = cleaned.replace(pattern, '');
++    });
++    
++    // Remove excessive whitespace
++    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
++    cleaned = cleaned.replace(/\s{2,}/g, ' ');
++    
++    return cleaned.trim();
++  }
++  
++  /**
++   * Truncate content while preserving cost information
++   */
++  function truncateWithContext(content, maxLength, costData) {
++    // If already under max length, return as is
++    if (content.length <= maxLength) {
++      return content;
++    }
++    
++    // Create a cost summary section
++    let costSummary = "\n\n=== IMPORTANT COST INFORMATION ===\n";
++    
++    if (costData.totalCost) {
++      costSummary += `Total Project Cost: ${costData.totalCost}\n\n`;
++    }
++    
++    // Add a sample of cost values with context
++    if (costData.costBreakdown.length > 0) {
++      costSummary += "Cost details found in document:\n";
++      
++      // Only include a reasonable number of cost items
++      const maxCostItems = 5;
++      for (let i = 0; i < Math.min(costData.costBreakdown.length, maxCostItems); i++) {
++        const item = costData.costBreakdown[i];
++        costSummary += `- ${item.context.trim()}\n`;
++      }
++    }
++    
++    // Reserve space for cost summary
++    const summaryLength = costSummary.length;
++    const availableLength = maxLength - summaryLength;
++    
++    // Take first 60% and last 35% of the available space
++    const firstPart = content.substring(0, Math.floor(availableLength * 0.6));
++    const lastPart = content.substring(content.length - Math.floor(availableLength * 0.35));
++    
++    return `${firstPart}\n\n[...CONTENT TRUNCATED...]\n\n${lastPart}${costSummary}`;
++  }
+\ No newline at end of file
+diff --git a/app/utils/tokenTracker.js b/app/utils/tokenTracker.js
+new file mode 100644
+index 0000000..3999184
+--- /dev/null
++++ b/app/utils/tokenTracker.js
+@@ -0,0 +1,178 @@
++/**
++ * Simple token usage tracking utility
++ */
++
++// In-memory storage for token usage (in a production app, use a database)
++let tokenUsageLog = [];
++
++/**
++ * Log token usage for an API request
++ * @param {String} endpoint The API endpoint used
++ * @param {Number} inputTokens Estimated input tokens
++ * @param {Number} outputTokens Estimated output tokens
++ * @param {String} model The model used (e.g., "gpt-4-turbo")
++ * @param {Boolean} success Whether the request was successful
++ */
++export function logTokenUsage(endpoint, inputTokens, outputTokens, model, success = true) {
++  const entry = {
++    timestamp: new Date().toISOString(),
++    endpoint,
++    inputTokens,
++    outputTokens,
++    totalTokens: inputTokens + outputTokens,
++    model,
++    success
++  };
++  
++  tokenUsageLog.push(entry);
++  
++  // Keep the log to a reasonable size in memory
++  if (tokenUsageLog.length > 1000) {
++    tokenUsageLog = tokenUsageLog.slice(-1000);
++  }
++  
++  console.log(`Token usage: ${inputTokens} in + ${outputTokens} out = ${inputTokens + outputTokens} total tokens (${model})`);
++  
++  // For production, you would store this in a database
++  return entry;
++}
++
++/**
++ * Estimate tokens from character count
++ * @param {String|Number} text Text or character count to estimate
++ * @returns {Number} Estimated token count
++ */
++export function estimateTokens(text) {
++  // If it's already a number, assume it's a character count
++  const charCount = typeof text === 'string' ? text.length : text;
++  // GPT models average ~4 chars per token for English text
++  return Math.ceil(charCount / 4);
++}
++
++/**
++ * Get token usage statistics
++ * @param {Object} options Filter options
++ * @returns {Object} Usage statistics
++ */
++export function getTokenUsageStats(options = {}) {
++  const { 
++    startDate, 
++    endDate, 
++    model,
++    endpoint 
++  } = options;
++  
++  // Filter logs based on criteria
++  let filtered = [...tokenUsageLog];
++  
++  if (startDate) {
++    filtered = filtered.filter(entry => new Date(entry.timestamp) >= new Date(startDate));
++  }
++  
++  if (endDate) {
++    filtered = filtered.filter(entry => new Date(entry.timestamp) <= new Date(endDate));
++  }
++  
++  if (model) {
++    filtered = filtered.filter(entry => entry.model === model);
++  }
++  
++  if (endpoint) {
++    filtered = filtered.filter(entry => entry.endpoint === endpoint);
++  }
++  
++  // Calculate statistics
++  const totalInputTokens = filtered.reduce((sum, entry) => sum + entry.inputTokens, 0);
++  const totalOutputTokens = filtered.reduce((sum, entry) => sum + entry.outputTokens, 0);
++  const totalTokens = totalInputTokens + totalOutputTokens;
++  const requestCount = filtered.length;
++  
++  return {
++    totalInputTokens,
++    totalOutputTokens,
++    totalTokens,
++    requestCount,
++    averagePerRequest: requestCount > 0 ? totalTokens / requestCount : 0,
++    successRate: requestCount > 0 ? 
++      filtered.filter(entry => entry.success).length / requestCount * 100 : 0
++  };
++}
++
++/**
++ * Estimated GPT-4 cost calculation (simplified)
++ * @param {Number} inputTokens Input token count
++ * @param {Number} outputTokens Output token count
++ * @returns {Number} Estimated cost in USD
++ */
++export function estimateGPT4Cost(inputTokens, outputTokens) {
++  // Pricing may change, so these should be configurable
++  const inputPricePerK = 0.03;  // $0.03 per 1K input tokens
++  const outputPricePerK = 0.06; // $0.06 per 1K output tokens
++  
++  const inputCost = (inputTokens / 1000) * inputPricePerK;
++  const outputCost = (outputTokens / 1000) * outputPricePerK;
++  
++  return inputCost + outputCost;
++}
++
++// Export a monitoring middleware function for API routes
++export function withTokenTracking(handler, options = {}) {
++  return async (req, ...args) => {
++    const startTime = Date.now();
++    const { pathname } = new URL(req.url);
++    const endpoint = options.endpoint || pathname;
++    const model = options.model || 'gpt-4-turbo';
++    
++    // Clone the request to read its body for token estimation
++    const reqClone = req.clone();
++    let inputTokens = 0;
++    
++    try {
++      const body = await reqClone.json();
++      
++      // If there's a prompt or content field, estimate tokens
++      if (body.prompt) {
++        inputTokens = estimateTokens(body.prompt);
++      } else if (body.content) {
++        inputTokens = estimateTokens(body.content);
++      } else if (body.fileContents) {
++        // Handle our bid analysis case
++        inputTokens = estimateTokens(
++          body.fileContents.reduce((sum, file) => sum + file.content.length, 0)
++        );
++      }
++    } catch (e) {
++      // Silently fail if we can't parse request body
++    }
++    
++    try {
++      // Process the request
++      const response = await handler(req, ...args);
++      
++      // Attempt to get response size for output token estimation
++      let outputTokens = 0;
++      const respClone = response.clone();
++      
++      try {
++        const respBody = await respClone.json();
++        
++        // Estimate based on JSON response size
++        const respText = JSON.stringify(respBody);
++        outputTokens = estimateTokens(respText);
++      } catch (e) {
++        // Use a fallback value if we can't parse response 
++        outputTokens = 500; // Reasonable fallback for most responses
++      }
++      
++      // Log the token usage
++      logTokenUsage(endpoint, inputTokens, outputTokens, model, true);
++      
++      // Return the original response
++      return response;
++    } catch (error) {
++      // Log failed request
++      logTokenUsage(endpoint, inputTokens, 0, model, false);
++      throw error;
++    }
++  };
++}
+\ No newline at end of file

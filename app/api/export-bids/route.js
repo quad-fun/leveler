@@ -26,6 +26,7 @@ export async function POST(request) {
           <div class="section">
             <h2>Summary</h2>
             <p><strong>Recommended Bid:</strong> ${results.summary.recommendedBid}</p>
+            <p><strong>Total Cost:</strong> $${results.summary.totalCost?.toLocaleString()}</p>
             <p><strong>Reasoning:</strong> ${results.summary.reasoning}</p>
           </div>
 
@@ -35,11 +36,17 @@ export async function POST(request) {
               <tr>
                 <th>Bidder</th>
                 <th>Total Cost</th>
+                <th>Materials</th>
+                <th>Labor</th>
+                <th>Overhead</th>
               </tr>
-              ${results.costAnalysis.bidComparison.map(bid => `
+              ${results.bidComparison.map(bid => `
                 <tr>
                   <td>${bid.bidder}</td>
-                  <td>$${bid.totalCost.toLocaleString()}</td>
+                  <td>$${bid.totalCost?.toLocaleString()}</td>
+                  <td>$${bid.keyComponents?.materials?.toLocaleString() || 'N/A'}</td>
+                  <td>$${bid.keyComponents?.labor?.toLocaleString() || 'N/A'}</td>
+                  <td>$${bid.keyComponents?.overhead?.toLocaleString() || 'N/A'}</td>
                 </tr>
               `).join('')}
             </table>
@@ -47,10 +54,9 @@ export async function POST(request) {
 
           <div class="section">
             <h2>Risk Assessment</h2>
-            <p><strong>Risk Level:</strong> ${results.riskAssessment.level}</p>
             <h3>Risk Factors:</h3>
             <ul>
-              ${results.riskAssessment.factors.map(factor => `
+              ${results.risks.map(factor => `
                 <li>${factor}</li>
               `).join('')}
             </ul>
