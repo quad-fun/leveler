@@ -18,7 +18,7 @@ const ExportResults = ({ results }) => {
       [''],
       ['Cost Comparison'],
       ['Bidder', 'Total Cost'],
-      ...results.costAnalysis.bidComparison.map(bid => 
+      ...results.bidComparison.map(bid => 
         [bid.bidder, bid.totalCost]
       )
     ]);
@@ -27,10 +27,8 @@ const ExportResults = ({ results }) => {
     const riskSheet = workbook.addWorksheet('Risk Assessment');
     riskSheet.addRows([
       ['Risk Assessment'],
-      ['Risk Level', results.riskAssessment.level],
-      [''],
       ['Risk Factors'],
-      ...results.riskAssessment.factors.map(factor => [factor])
+      ...results.risks.map(factor => [factor])
     ]);
 
     // Recommendations Sheet
@@ -53,7 +51,7 @@ const ExportResults = ({ results }) => {
 
   const exportToPDF = async () => {
     try {
-      const response = await fetch('/api/export-pdf', {
+      const response = await fetch('/api/export-bids', {  // Fixed path to match your route file
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
