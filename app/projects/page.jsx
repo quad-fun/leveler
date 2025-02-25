@@ -1,43 +1,14 @@
+// app/projects/page.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PlusCircle, Calendar, Building, FileText, ChevronRight } from 'lucide-react';
 
-// Mock data for projects (replace with actual API call in production)
-const mockProjects = [
-  {
-    id: 'p1',
-    name: 'Downtown Residential Tower',
-    description: 'A 22-story residential building with 265 units and ground-floor retail',
-    location: 'Downtown Metro',
-    createdAt: '2025-01-15T12:00:00Z',
-    bidCount: 3,
-    totalBudget: 85000000
-  },
-  {
-    id: 'p2',
-    name: 'Westside Office Complex',
-    description: 'Modern office space with 3 buildings and underground parking',
-    location: 'West Business District',
-    createdAt: '2025-01-20T09:30:00Z',
-    bidCount: 2,
-    totalBudget: 56000000
-  },
-  {
-    id: 'p3',
-    name: 'Riverside Mixed-Use Development',
-    description: 'Combined residential and commercial space along the riverfront',
-    location: 'Riverside',
-    createdAt: '2025-02-05T14:15:00Z',
-    bidCount: 0,
-    totalBudget: null
-  }
-];
-
 const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProject, setNewProject] = useState({
     name: '',
@@ -46,22 +17,32 @@ const ProjectsPage = () => {
   });
 
   useEffect(() => {
-    // Simulate API call to fetch projects
+    // Fetch projects from API
     const fetchProjects = async () => {
-      // In production, replace with actual API call
-      // const response = await fetch('/api/projects');
-      // const data = await response.json();
-      
-      setTimeout(() => {
-        setProjects(mockProjects);
+      setLoading(true);
+      try {
+        const response = await fetch('/api/projects');
+        
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setProjects(data);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        setError('Failed to load projects. Please try again.');
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     };
 
     fetchProjects();
   }, []);
 
-  const handleCreateProject = async (e) => {
+  // app/projects/page.jsx - Update handleCreateProject function
+
+const handleCreateProject = async (e) => {
     e.preventDefault();
     
     // Validate inputs
@@ -69,26 +50,35 @@ const ProjectsPage = () => {
       alert('Please enter a project name');
       return;
     }
-
-    // In production, replace with actual API call
-    // const response = await fetch('/api/projects', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(newProject)
-    // });
-    
-    // Simulate creating a new project
-    const createdProject = {
-      id: `p${Math.floor(Math.random() * 10000)}`,
-      createdAt: new Date().toISOString(),
-      bidCount: 0,
-      totalBudget: null,
-      ...newProject
-    };
-    
-    setProjects([createdProject, ...projects]);
-    setNewProject({ name: '', description: '', location: '' });
-    setShowNewProject(false);
+  
+    try {
+      // Add totalBudget to the form data
+      const projectToCreate = {
+        ...newProject,
+        totalBudget: newProject.totalBudget ? parseFloat(newProject.totalBudget) : null
+      };
+  
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectToCreate)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create project');
+      }
+      
+      const createdProject = await response.json();
+      
+      // Add to list instead of redirecting
+      setProjects(prevProjects => [createdProject, ...prevProjects]);
+      setNewProject({ name: '', description: '', location: '', totalBudget: '' });
+      setShowNewProject(false);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      alert(`Failed to create project: ${error.message}`);
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -189,6 +179,16 @@ const ProjectsPage = () => {
         <div className="flex justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
         </div>
+      ) : error ? (
+        <div className="text-center py-20 bg-red-50 rounded-lg text-red-700">
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
       ) : projects.length === 0 ? (
         <div className="text-center py-20 bg-gray-50 rounded-lg">
           <Building className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -205,8 +205,8 @@ const ProjectsPage = () => {
         <div className="space-y-4">
           {projects.map((project) => (
             <Link 
-              href={`/projects/${project.id}`} 
-              key={project.id}
+              href={`/projects/${project._id}`}  // Note: Using _id from MongoDB
+              key={project._id}  // Note: Using _id from MongoDB
               className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow"
             >
               <div className="p-6">

@@ -26,70 +26,74 @@ export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching dashboard stats
-    const fetchDashboardData = async () => {
-      // In production, this would be a real API call
-      // const response = await fetch('/api/dashboard');
-      // const data = await response.json();
-      
-      // Sample data for development
-      setTimeout(() => {
-        setStats({
-          totalProjects: 3,
-          activeBids: 5,
-          recentProjects: [
-            {
-              id: 'p1',
-              name: 'Downtown Residential Tower',
-              location: 'Downtown Metro',
-              bidCount: 3,
-              totalBudget: 85000000,
-              updatedAt: '2025-02-20T14:30:00Z'
-            },
-            {
-              id: 'p2',
-              name: 'Westside Office Complex',
-              location: 'West Business District',
-              bidCount: 2,
-              totalBudget: 56000000,
-              updatedAt: '2025-02-18T09:15:00Z'
-            }
-          ],
-          recentBids: [
-            {
-              id: 'b1',
-              name: 'bid_sample_1.pdf',
-              projectId: 'p1',
-              projectName: 'Downtown Residential Tower',
-              bidder: 'Quantum Urban Builders',
-              totalCost: 82300000,
-              submittedAt: '2025-02-20T09:30:00Z'
-            },
-            {
-              id: 'b3',
-              name: 'bid_sample_3.pdf',
-              projectId: 'p1',
-              projectName: 'Downtown Residential Tower',
-              bidder: 'Sustainable Urban Solutions',
-              totalCost: 88750000,
-              submittedAt: '2025-02-19T11:45:00Z'
-            },
-            {
-              id: 'b4',
-              name: 'westside_bid1.pdf',
-              projectId: 'p2',
-              projectName: 'Westside Office Complex',
-              bidder: 'Metro Commercial Builders',
-              totalCost: 56000000,
-              submittedAt: '2025-02-18T10:20:00Z'
-            }
-          ]
-        });
+    // Fetch dashboard stats
+    const fetchDashboardStats = async () => {
+      try {
+        const response = await fetch('/api/dashboard-stats');
+        const data = await response.json();
+        setStats(data);
         setLoading(false);
-      }, 800);
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        // Keep the sample data as fallback
+        setTimeout(() => {
+          setStats({
+            totalProjects: 3,
+            activeBids: 5,
+            recentProjects: [
+              {
+                id: 'p1',
+                name: 'Downtown Residential Tower',
+                location: 'Downtown Metro',
+                bidCount: 3,
+                totalBudget: 85000000,
+                updatedAt: '2025-02-20T14:30:00Z'
+              },
+              {
+                id: 'p2',
+                name: 'Westside Office Complex',
+                location: 'West Business District',
+                bidCount: 2,
+                totalBudget: 56000000,
+                updatedAt: '2025-02-18T09:15:00Z'
+              }
+            ],
+            recentBids: [
+              {
+                id: 'b1',
+                name: 'bid_sample_1.pdf',
+                projectId: 'p1',
+                projectName: 'Downtown Residential Tower',
+                bidder: 'Quantum Urban Builders',
+                totalCost: 82300000,
+                submittedAt: '2025-02-20T09:30:00Z'
+              },
+              {
+                id: 'b3',
+                name: 'bid_sample_3.pdf',
+                projectId: 'p1',
+                projectName: 'Downtown Residential Tower',
+                bidder: 'Sustainable Urban Solutions',
+                totalCost: 88750000,
+                submittedAt: '2025-02-19T11:45:00Z'
+              },
+              {
+                id: 'b4',
+                name: 'westside_bid1.pdf',
+                projectId: 'p2',
+                projectName: 'Westside Office Complex',
+                bidder: 'Metro Commercial Builders',
+                totalCost: 56000000,
+                submittedAt: '2025-02-18T10:20:00Z'
+              }
+            ]
+          });
+          setLoading(false);
+        }, 800);
+      }
     };
 
-    fetchDashboardData();
+    fetchDashboardStats();
   }, []);
 
   const formatCurrency = (amount) => {
