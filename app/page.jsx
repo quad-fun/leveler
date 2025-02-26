@@ -1,3 +1,4 @@
+// app/page.jsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -30,8 +31,17 @@ export default function DashboardHome() {
     const fetchDashboardStats = async () => {
       try {
         const response = await fetch('/api/dashboard-stats');
+        if (!response.ok) {
+          throw new Error(`Error fetching dashboard stats: ${response.status}`);
+        }
         const data = await response.json();
-        setStats(data);
+        // Ensure all expected properties exist in the response
+        setStats({
+          totalProjects: data.totalProjects || 0,
+          activeBids: data.activeBids || 0,
+          recentProjects: data.recentProjects || [],
+          recentBids: data.recentBids || []
+        });
         setLoading(false);
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -259,7 +269,7 @@ export default function DashboardHome() {
                   </Link>
                 </div>
                 <div className="p-6">
-                  {stats.recentProjects.length === 0 ? (
+                  {Array.isArray(stats.recentProjects) && stats.recentProjects.length === 0 ? (
                     <div className="text-center py-8">
                       <p className="text-gray-500">No projects yet</p>
                       <Link 
@@ -271,10 +281,10 @@ export default function DashboardHome() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {stats.recentProjects.map((project) => (
+                      {Array.isArray(stats.recentProjects) && stats.recentProjects.map((project) => (
                         <Link 
-                          key={project.id} 
-                          href={`/projects/${project.id}`}
+                          key={project._id || project.id} 
+                          href={`/projects/${project._id || project.id}`}
                           className="block p-4 border border-gray-100 rounded-lg hover:bg-gray-50"
                         >
                           <div className="flex items-start justify-between">
@@ -286,7 +296,9 @@ export default function DashboardHome() {
                             </div>
                             <div className="text-right">
                               <span className="text-green-600 font-medium">{formatCurrency(project.totalBudget)}</span>
-                              <p className="text-xs text-gray-500">Updated {formatRelativeTime(project.updatedAt)}</p>
+                              <p className="text-xs text-gray-500">
+                                Updated {project.updatedAt ? formatRelativeTime(project.updatedAt) : 'recently'}
+                              </p>
                             </div>
                           </div>
                         </Link>
@@ -305,7 +317,7 @@ export default function DashboardHome() {
                   </Link>
                 </div>
                 <div className="p-6">
-                  {stats.recentBids.length === 0 ? (
+                  {Array.isArray(stats.recentBids) && stats.recentBids.length === 0 ? (
                     <div className="text-center py-8">
                       <p className="text-gray-500">No bids analyzed yet</p>
                       <Link 
@@ -317,16 +329,16 @@ export default function DashboardHome() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {stats.recentBids.map((bid) => (
+                      {Array.isArray(stats.recentBids) && stats.recentBids.map((bid) => (
                         <Link 
-                          key={bid.id} 
-                          href={`/projects/${bid.projectId}/bids/${bid.id}`}
+                          key={bid._id || bid.id} 
+                          href={`/projects/${bid.projectId}/bids/${bid._id || bid.id}`}
                           className="block p-4 border border-gray-100 rounded-lg hover:bg-gray-50"
                         >
                           <div>
                             <h3 className="font-medium text-gray-900">{bid.bidder}</h3>
                             <p className="text-xs text-gray-500">
-                              {bid.projectName} • {formatDate(bid.submittedAt)}
+                              {bid.projectName} • {bid.submittedAt ? formatDate(bid.submittedAt) : 'Recently submitted'}
                             </p>
                             <p className="mt-1 text-green-600 font-medium">
                               {formatCurrency(bid.totalCost)}

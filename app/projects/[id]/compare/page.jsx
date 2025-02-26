@@ -1,3 +1,4 @@
+// app/projects/[id]/compare/page.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -18,6 +19,11 @@ export default function CompareBids({ params }) {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // Check if id exists
+        if (!id) {
+          throw new Error('No project ID provided');
+        }
+        
         const projectRes = await fetch(`/api/projects/${id}`);
         if (!projectRes.ok) throw new Error('Failed to fetch project');
         const projectData = await projectRes.json();
@@ -53,9 +59,9 @@ export default function CompareBids({ params }) {
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return 'N/A';
     if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
+      return `${(amount / 1000000).toFixed(1)}M`;
     }
-    return `$${amount.toLocaleString()}`;
+    return `${amount.toLocaleString()}`;
   };
 
   const formatDate = (dateString) => {
@@ -246,4 +252,3 @@ export default function CompareBids({ params }) {
       </div>
     </div>
   );
-}
