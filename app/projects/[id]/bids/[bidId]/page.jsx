@@ -1,53 +1,56 @@
+// app/projects/[id]/bids/[bidId]/page.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Building, Calendar, FileText, UploadCloud, ArrowLeft, ChevronRight, PieChart } from 'lucide-react';
+import { ArrowLeft, Building, Calendar, FileText, Download, ArrowUpRight, ArrowRight } from 'lucide-react';
 
-export default function ProjectPage({ params }) {
+export default function BidDetailsPage({ params }) {
+  const { id, bidId } = params;
+  
   const [project, setProject] = useState(null);
-  const [bids, setBids] = useState([]);
+  const [bid, setBid] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedBids, setSelectedBids] = useState([]);
-  const [uploadFile, setUploadFile] = useState(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
 
   useEffect(() => {
-    // Fetch project data
-    const fetchProjectData = async () => {
+    const fetchData = async () => {
       setLoading(true);
       setError(null);
       
+      // Check that we have both the project id and bid id
+      if (!id || !bidId) {
+        setError('Missing project ID or bid ID');
+        setLoading(false);
+        return;
+      }
+      
       try {
         // Fetch project details
-        const projectResponse = await fetch(`/api/projects/${params.id}`);
+        const projectResponse = await fetch(`/api/projects/${id}`);
         if (!projectResponse.ok) {
           throw new Error('Failed to fetch project details');
         }
         const projectData = await projectResponse.json();
         setProject(projectData);
 
-        // Fetch bids for this project
-        const bidsResponse = await fetch(`/api/projects/${params.id}/bids`);
-        if (!bidsResponse.ok) {
-          throw new Error('Failed to fetch bids');
+        // Fetch bid details
+        const bidResponse = await fetch(`/api/projects/${id}/bids/${bidId}`);
+        if (!bidResponse.ok) {
+          throw new Error('Failed to fetch bid details');
         }
-        const bidsData = await bidsResponse.json();
-        setBids(bidsData);
+        const bidData = await bidResponse.json();
+        setBid(bidData);
       } catch (error) {
-        console.error('Error fetching project data:', error);
+        console.error('Error fetching data:', error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    if (params.id) {
-      fetchProjectData();
-    }
-  }, [params.id]);
+    fetchData();
+  }, [id, bidId]);
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return 'N/A';
@@ -69,146 +72,6 @@ export default function ProjectPage({ params }) {
     });
   };
 
-  const toggleBidSelection = (bidId) => {
-    if (selectedBids.includes(bidId)) {
-      setSelectedBids(selectedBids.filter(id => id !== bidId));
-    } else {
-      setSelectedBids([...selectedBids, bidId]);
-    }
-  };
-
-  const handleCompare = () => {
-    if (selectedBids.length < 2) {
-      alert('Please select at least two bids to compare');
-      return;
-    }
-    
-    // Navigate to comparison page with selected bid IDs
-    window.location.href = `/projects/${project._id}/compare?bids=${selectedBids.join(',')}`;
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadFile(e.target.files[0]);
-    }
-  };
-
-  const handleFileUpload = async () => {
-    if (!uploadFile) {
-      alert('Please select a file first');
-      return;
-    }
-    
-    setUploadLoading(true);
-    
-    try {
-      // First, create a bid record in the database
-      const bidMetadata = {
-        name: uploadFile.name,
-        bidder: uploadFile.name.split('.')[0].replace(/_/g, ' '), // Extract bidder name from filename for demo
-        projectId: project._id,
-        status: 'pending'
-      };
-      
-      const bidResponse = await fetch(`/api/projects/${project._id}/bids`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bidMetadata),
-      });
-      
-      if (!bidResponse.ok) {
-        throw new Error('Failed to create bid record');
-      }
-      
-      const bidData = await bidResponse.json();
-      
-      // Refresh bids to show the new one
-      const updatedBidsResponse = await fetch(`/api/projects/${project._id}/bids`);
-      const updatedBids = await updatedBidsResponse.json();
-      setBids(updatedBids);
-      
-      setShowUploadModal(false);
-      setUploadFile(null);
-      
-      // Show success message
-      alert('Bid uploaded successfully! You can now analyze it.');
-    } catch (error) {
-      console.error('Error uploading bid:', error);
-      alert(`Failed to upload bid: ${error.message}`);
-    } finally {
-      setUploadLoading(false);
-    }
-  };
-
-  const analyzeBid = async (bidId) => {
-    // Find the bid by ID
-    const bid = bids.find(b => b._id === bidId);
-    if (!bid) return;
-    
-    try {
-      // Set this specific bid to processing
-      setBids(prevBids => 
-        prevBids.map(b => 
-          b._id === bidId ? {...b, status: 'processing'} : b
-        )
-      );
-      
-      // Get the file content and analyze
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      
-      // For now, just prompt the user to select the file again
-      // In production, you would store the file in a database or cloud storage
-      alert(`Please select the ${bid.name} file again for analysis`);
-      
-      fileInput.onchange = async (e) => {
-        if (e.target.files && e.target.files[0]) {
-          const file = e.target.files[0];
-          const fileContent = await file.text();
-          
-          const analysisResponse = await fetch(`/api/analyze-bids`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              fileContents: [{
-                name: bid.name,
-                content: fileContent
-              }],
-              bidId: bidId
-            }),
-          });
-          
-          if (!analysisResponse.ok) {
-            throw new Error('Failed to analyze bid');
-          }
-          
-          // Refresh bids to show the updated status
-          const updatedBidsResponse = await fetch(`/api/projects/${project._id}/bids`);
-          const updatedBids = await updatedBidsResponse.json();
-          setBids(updatedBids);
-          
-          alert('Bid analyzed successfully!');
-        }
-      };
-      
-      fileInput.click();
-    } catch (error) {
-      console.error('Error analyzing bid:', error);
-      alert(`Failed to analyze bid: ${error.message}`);
-      
-      // Reset the bid status
-      setBids(prevBids => 
-        prevBids.map(b => 
-          b._id === bidId ? {...b, status: 'pending'} : b
-        )
-      );
-    }
-  };
-
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto p-6">
@@ -219,26 +82,13 @@ export default function ProjectPage({ params }) {
     );
   }
 
-  if (error) {
+  if (error || !project || !bid) {
     return (
       <div className="max-w-6xl mx-auto p-6">
         <div className="text-center py-20 bg-red-50 rounded-lg">
-          <h3 className="text-lg font-medium text-red-700">{error}</h3>
-          <Link href="/projects" className="text-blue-600 hover:text-blue-800 mt-2 inline-block">
-            Back to Projects
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!project) {
-    return (
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="text-center py-20 bg-gray-50 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900">Project not found</h3>
-          <Link href="/projects" className="text-blue-600 hover:text-blue-800 mt-2 inline-block">
-            Back to Projects
+          <h3 className="text-lg font-medium text-red-700">{error || 'Bid or project not found'}</h3>
+          <Link href={`/projects/${id}`} className="text-blue-600 hover:text-blue-800 mt-2 inline-block">
+            Back to Project
           </Link>
         </div>
       </div>
@@ -247,8 +97,180 @@ export default function ProjectPage({ params }) {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      {/* Rest of your component's JSX remains the same */}
-      {/* ... */}
+      <div className="mb-6">
+        <Link href={`/projects/${id}`} className="flex items-center text-blue-600 hover:text-blue-800">
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back to Project
+        </Link>
+      </div>
+
+      {/* Bid header */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="flex flex-col md:flex-row justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{bid.bidder || 'Unnamed Bid'}</h1>
+            <div className="flex items-center text-sm text-gray-500 mt-1">
+              <FileText className="w-4 h-4 mr-1" />
+              <span>{bid.name}</span>
+              <span className="mx-2">•</span>
+              <Calendar className="w-4 h-4 mr-1" />
+              <span>Submitted on {formatDate(bid.submittedAt)}</span>
+            </div>
+            <Link href={`/projects/${id}`} className="flex items-center text-sm text-blue-600 mt-1">
+              <Building className="w-4 h-4 mr-1" />
+              <span>{project.name}</span>
+            </Link>
+          </div>
+          
+          <div className="mt-4 md:mt-0 md:ml-4">
+            {bid.totalCost ? (
+              <div className="md:text-right">
+                <div className="text-sm text-gray-500">Total Bid Amount</div>
+                <div className="text-xl font-bold text-green-600">
+                  {formatCurrency(bid.totalCost)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {/* Main content grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left column - Bid details */}
+        <div className="md:col-span-2 space-y-6">
+          {/* Cost breakdown */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-medium mb-4">Cost Breakdown</h2>
+            
+            {bid.keyComponents ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <span className="font-medium">Category</span>
+                  <span className="font-medium">Amount</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Materials</span>
+                  <span>{formatCurrency(bid.keyComponents.materials)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Labor</span>
+                  <span>{formatCurrency(bid.keyComponents.labor)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Overhead</span>
+                  <span>{formatCurrency(bid.keyComponents.overhead)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center pt-2 border-t font-medium">
+                  <span>Total</span>
+                  <span className="text-green-600">{formatCurrency(bid.totalCost)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                {bid.status === 'analyzed' ? (
+                  <p>No detailed cost breakdown available.</p>
+                ) : (
+                  <p>Analyze this bid to see cost breakdown.</p>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Analysis results */}
+          {bid.status === 'analyzed' && bid.analysisResults && (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-medium mb-4">Analysis Results</h2>
+              
+              {/* Risks section */}
+              {bid.analysisResults.risks && bid.analysisResults.risks.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-medium text-gray-900 mb-2">Risk Factors</h3>
+                  <ul className="list-disc pl-5 text-gray-600 space-y-1">
+                    {bid.analysisResults.risks.map((risk, index) => (
+                      <li key={index}>{risk}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Recommendations section */}
+              {bid.analysisResults.recommendations && bid.analysisResults.recommendations.length > 0 && (
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Recommendations</h3>
+                  <ul className="list-disc pl-5 text-gray-600 space-y-1">
+                    {bid.analysisResults.recommendations.map((rec, index) => (
+                      <li key={index}>{rec}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Right column - Actions and status */}
+        <div className="space-y-6">
+          {/* Bid status */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-medium mb-4">Bid Status</h2>
+            
+            <div className="flex items-center mb-4">
+              <div className={`h-3 w-3 rounded-full mr-2 ${
+                bid.status === 'analyzed' 
+                  ? 'bg-green-500' 
+                  : bid.status === 'processing' 
+                    ? 'bg-blue-500 animate-pulse' 
+                    : 'bg-yellow-500'
+              }`}></div>
+              
+              <span className="capitalize">{bid.status || 'pending'}</span>
+            </div>
+            
+            {bid.status !== 'analyzed' && (
+              <button
+                className={`w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${
+                  bid.status === 'processing' ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                disabled={bid.status === 'processing'}
+              >
+                {bid.status === 'processing' ? 'Processing...' : 'Analyze Bid'}
+              </button>
+            )}
+          </div>
+          
+          {/* Actions */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-medium mb-4">Actions</h2>
+            
+            <div className="space-y-3">
+              <button className="w-full flex items-center justify-between py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <span>Download Original</span>
+                <Download className="w-4 h-4" />
+              </button>
+              
+              {bid.status === 'analyzed' && (
+                <button className="w-full flex items-center justify-between py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  <span>Export Analysis</span>
+                  <ArrowUpRight className="w-4 h-4" />
+                </button>
+              )}
+              
+              <Link 
+                href={`/projects/${id}/compare?bids=${bidId}`}
+                className="w-full flex items-center justify-between py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <span>Compare With Others</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

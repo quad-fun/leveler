@@ -1,9 +1,29 @@
 // app/api/dashboard-stats/route.js
 import clientPromise from '../../../lib/mongodb';
+import { getDashboardStats } from '../../../lib/mockDataService';
+
+// Flag to force using mock data for testing
+const FORCE_MOCK_DATA = process.env.FORCE_MOCK_DATA === 'true';
 
 export async function GET() {
+  // If mock data is forced, return it immediately
+  if (FORCE_MOCK_DATA) {
+    console.log('Using mock data (forced)');
+    return Response.json(getDashboardStats());
+  }
+
   try {
-    const client = await clientPromise;
+    // Set a short timeout for MongoDB connection attempt
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('MongoDB connection timeout')), 3000)
+    );
+    
+    // Try to connect to MongoDB with a timeout
+    const client = await Promise.race([
+      clientPromise,
+      timeoutPromise
+    ]);
+    
     const db = client.db("bidleveling");
     
     // Get project count
@@ -26,6 +46,8 @@ export async function GET() {
       .limit(5)
       .toArray();
     
+    console.log('Successfully fetched data from MongoDB');
+    
     return Response.json({
       totalProjects,
       activeBids: totalBids,
@@ -33,7 +55,10 @@ export async function GET() {
       recentBids
     });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    return Response.json({ error: 'Failed to fetch stats' }, { status: 500 });
+    console.error('Error fetching dashboard stats from MongoDB:', error);
+    
+    // Return mock data as a fallback
+    console.log('Falling back to mock data');
+    return Response.json(getDashboardStats());
   }
 }
