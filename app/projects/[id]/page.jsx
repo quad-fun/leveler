@@ -3,10 +3,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Building, Calendar, FileText, UploadCloud, ArrowLeft, ChevronRight, PieChart, X, PlayCircle, Loader } from 'lucide-react';
+import { Building, Calendar, FileText, UploadCloud, ArrowLeft, ChevronRight, PieChart, X, PlayCircle, Loader, Trash2, MoreVertical, AlertCircle } from 'lucide-react';
 import BidUpload from '@/app/features/BidUpload';
 import UploadModal from '@/app/features/UploadModal';
 import AnalyzeModal from '@/app/features/AnalyzeModal';
+import DeleteModal from '@/app/components/DeleteModal';
 
 export default function ProjectPage({ params }) {
   const [project, setProject] = useState(null);
@@ -18,6 +19,9 @@ export default function ProjectPage({ params }) {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
+  const [showDeleteProjectModal, setShowDeleteProjectModal] = useState(false);
+  const [showDeleteBidModal, setShowDeleteBidModal] = useState(false);
+  const [bidToDelete, setBidToDelete] = useState(null);
 
   useEffect(() => {
     // Fetch project data
@@ -233,6 +237,38 @@ export default function ProjectPage({ params }) {
     bid.status !== 'processing'
   ).length;
 
+  const handleDeleteProject = async () => {
+    try {
+      const response = await fetch(`/api/projects/${params.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete project');
+      
+      window.location.href = '/projects';
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      alert('Failed to delete project');
+    }
+  };
+
+  const handleDeleteBid = async (bidId) => {
+    try {
+      const response = await fetch(`/api/projects/${params.id}/bids/${bidId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete bid');
+      
+      await refreshBids();
+      setShowDeleteBidModal(false);
+      setBidToDelete(null);
+    } catch (error) {
+      console.error('Error deleting bid:', error);
+      alert('Failed to delete bid');
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto p-6">
@@ -309,6 +345,12 @@ export default function ProjectPage({ params }) {
               </div>
             ) : null}
           </div>
+          <button
+            onClick={() => setShowDeleteProjectModal(true)}
+            className="text-red-600 hover:text-red-800"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
         </div>
       </div>
       
@@ -422,6 +464,15 @@ export default function ProjectPage({ params }) {
                   >
                     <ChevronRight className="w-5 h-5" />
                   </Link>
+                  <button
+                    onClick={() => {
+                      setBidToDelete(bid);
+                      setShowDeleteBidModal(true);
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -461,6 +512,27 @@ export default function ProjectPage({ params }) {
           const successCount = results.filter(r => r.success).length;
           alert(`Successfully analyzed ${successCount} of ${results.length} bids`);
         }}
+      />
+
+      {/* Delete Project Modal */}
+      <DeleteModal
+        isOpen={showDeleteProjectModal}
+        onClose={() => setShowDeleteProjectModal(false)}
+        onConfirm={handleDeleteProject}
+        title="Delete Project"
+        message="Are you sure you want to delete this project? This will also delete all associated bids and cannot be undone."
+      />
+
+      {/* Delete Bid Modal */}
+      <DeleteModal
+        isOpen={showDeleteBidModal}
+        onClose={() => {
+          setShowDeleteBidModal(false);
+          setBidToDelete(null);
+        }}
+        onConfirm={() => handleDeleteBid(bidToDelete?._id)}
+        title="Delete Bid"
+        message={`Are you sure you want to delete the bid from ${bidToDelete?.bidder || 'this bidder'}? This action cannot be undone.`}
       />
     </div>
   );

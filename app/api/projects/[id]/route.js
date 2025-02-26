@@ -77,6 +77,36 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  // Similar pattern with mock data fallback
-  // Implementation omitted for brevity
+  try {
+    const { id } = params;
+    
+    if (!ObjectId.isValid(id)) {
+      return Response.json({ error: 'Invalid project ID format' }, { status: 400 });
+    }
+    
+    const client = await clientPromise;
+    const db = client.db("bidleveling");
+    
+    // Delete the project
+    const result = await db.collection("projects").deleteOne({ 
+      _id: new ObjectId(id) 
+    });
+    
+    if (result.deletedCount === 0) {
+      return Response.json({ error: 'Project not found' }, { status: 404 });
+    }
+    
+    // Delete all associated bids
+    await db.collection("bids").deleteMany({ 
+      projectId: id 
+    });
+    
+    return Response.json({ message: 'Project and associated bids deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    return Response.json({ 
+      error: 'Failed to delete project',
+      message: error.message 
+    }, { status: 500 });
+  }
 }
