@@ -3,7 +3,19 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Building, Calendar } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Building, 
+  Calendar, 
+  FileSpreadsheet, 
+  ChevronDown, 
+  ChevronUp, 
+  Check, 
+  BarChart,
+  AlertTriangle,
+  CheckCircle,
+  FileText
+} from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
 export default function CompareBids({ params }) {
@@ -134,6 +146,67 @@ export default function CompareBids({ params }) {
         <p className="text-gray-600 mt-1">Comparing {bids.length} bids for {project.name}</p>
       </div>
 
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-sm text-gray-500">Lowest Bid</div>
+            <div className="text-2xl font-bold text-green-600 mt-1">
+              ${lowestBid?.totalCost?.toLocaleString()}
+            </div>
+            <div className="text-sm font-medium text-gray-900 mt-1">{lowestBid?.bidder}</div>
+          </div>
+          
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-sm text-gray-500">Average Bid</div>
+            <div className="text-2xl font-bold text-gray-900 mt-1">
+              ${(bids.reduce((acc, bid) => acc + bid.totalCost, 0) / bids.length).toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-600 mt-1">Across {bids.length} bids</div>
+          </div>
+          
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-sm text-gray-500">Bid Spread</div>
+            <div className="text-2xl font-bold text-blue-600 mt-1">
+              {((Math.max(...bids.map(b => b.totalCost)) - 
+                Math.min(...bids.map(b => b.totalCost))) / 
+                Math.min(...bids.map(b => b.totalCost)) * 100).toFixed(1)}%
+            </div>
+            <div className="text-sm text-gray-600 mt-1">High-Low Variance</div>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <div>
+            <div className="text-sm text-gray-500">Avg Materials %</div>
+            <div className="text-lg font-semibold">
+              {(bids.reduce((acc, bid) => 
+                acc + (bid.keyComponents?.materials / bid.totalCost * 100 || 0), 0) / bids.length
+              ).toFixed(1)}%
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Avg Labor %</div>
+            <div className="text-lg font-semibold">
+              {(bids.reduce((acc, bid) => 
+                acc + (bid.keyComponents?.labor / bid.totalCost * 100 || 0), 0) / bids.length
+              ).toFixed(1)}%
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Earliest Submission</div>
+            <div className="text-lg font-semibold">
+              {formatDate(Math.min(...bids.map(b => new Date(b.submittedAt))))}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Latest Submission</div>
+            <div className="text-lg font-semibold">
+              {formatDate(Math.max(...bids.map(b => new Date(b.submittedAt))))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Comparison table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
@@ -252,3 +325,4 @@ export default function CompareBids({ params }) {
       </div>
     </div>
   );
+}

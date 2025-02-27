@@ -1,13 +1,15 @@
-// app/projects/[id]/page.jsx
-'use client';
+'use client'; // This line needs to be at the very top of the file!
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Building, Calendar, FileText, UploadCloud, ArrowLeft, ChevronRight, PieChart, X, PlayCircle, Loader, Trash2, MoreVertical, AlertCircle } from 'lucide-react';
-import BidUpload from '@/app/features/BidUpload';
-import UploadModal from '@/app/features/UploadModal';
-import AnalyzeModal from '@/app/features/AnalyzeModal';
-import DeleteModal from '@/app/components/DeleteModal';
+import { Building, Calendar, FileText, UploadCloud, ArrowLeft, ChevronRight, PieChart } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+// Dynamically import AnalyzeModal to avoid any potential SSR issues
+const AnalyzeModal = dynamic(() => import('../../features/AnalyzeModal'), { 
+  ssr: false,
+  loading: () => <p>Loading modal...</p>
+});
 
 export default function ProjectPage({ params }) {
   const [project, setProject] = useState(null);
@@ -18,10 +20,37 @@ export default function ProjectPage({ params }) {
   const [selectedBids, setSelectedBids] = useState([]);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
-  const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
-  const [showDeleteProjectModal, setShowDeleteProjectModal] = useState(false);
-  const [showDeleteBidModal, setShowDeleteBidModal] = useState(false);
-  const [bidToDelete, setBidToDelete] = useState(null);
+  const [analyzeModalOpen, setAnalyzeModalOpen] = useState(false);
+  const [selectedBidForAnalysis, setSelectedBidForAnalysis] = useState(null);
+
+  const analyzeBid = (bidId) => {
+    // Find the bid by ID
+    const bid = bids.find(b => b._id === bidId);
+    if (!bid) return;
+    
+    // Open the analyze modal with the selected bid
+    setSelectedBidForAnalysis(bid);
+    setAnalyzeModalOpen(true);
+  };
+  
+  const handleAnalysisComplete = () => {
+    // Refresh bids to show the updated status
+    const fetchBids = async () => {
+      try {
+        const response = await fetch(`/api/projects/${params.id}/bids`);
+        if (response.ok) {
+          const updatedBids = await response.json();
+          setBids(updatedBids);
+        }
+      } catch (error) {
+        console.error('Error refreshing bids:', error);
+      }
+    };
+    
+    fetchBids();
+    setAnalyzeModalOpen(false);
+    setSelectedBidForAnalysis(null);
+  };
 
   useEffect(() => {
     // Fetch project data
@@ -155,120 +184,6 @@ export default function ProjectPage({ params }) {
     }
   };
 
-  const analyzeBid = async (bidId) => {
-    // Find the bid by ID
-    const bid = bids.find(b => b._id === bidId);
-    if (!bid) return;
-    
-    try {
-      // Set this specific bid to processing
-      setBids(prevBids => 
-        prevBids.map(b => 
-          b._id === bidId ? {...b, status: 'processing'} : b
-        )
-      );
-      
-      // Get the file content and analyze
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      
-      // For now, just prompt the user to select the file again
-      // In production, you would store the file in a database or cloud storage
-      alert(`Please select the ${bid.name} file again for analysis`);
-      
-      fileInput.onchange = async (e) => {
-        if (e.target.files && e.target.files[0]) {
-          const file = e.target.files[0];
-          const fileContent = await file.text();
-          
-          const analysisResponse = await fetch(`/api/analyze-bids`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              fileContents: [{
-                name: bid.name,
-                content: fileContent
-              }],
-              bidId: bidId
-            }),
-          });
-          
-          if (!analysisResponse.ok) {
-            throw new Error('Failed to analyze bid');
-          }
-          
-          // Refresh bids to show the updated status
-          const updatedBidsResponse = await fetch(`/api/projects/${params.id}/bids`);
-          const updatedBids = await updatedBidsResponse.json();
-          setBids(updatedBids);
-          
-          alert('Bid analyzed successfully!');
-        }
-      };
-      
-      fileInput.click();
-    } catch (error) {
-      console.error('Error analyzing bid:', error);
-      alert(`Failed to analyze bid: ${error.message}`);
-      
-      // Reset the bid status
-      setBids(prevBids => 
-        prevBids.map(b => 
-          b._id === bidId ? {...b, status: 'pending'} : b
-        )
-      );
-    }
-  };
-
-  const refreshBids = async () => {
-    const response = await fetch(`/api/projects/${params.id}/bids`);
-    if (response.ok) {
-      const data = await response.json();
-      setBids(data);
-    }
-  };
-
-  const eligibleBidCount = bids.filter(bid => bid.status !== 'analyzed' && bid.status !== 'processing').length;
-  const selectedEligibleBidCount = bids.filter(bid => 
-    selectedBids.includes(bid._id) && 
-    bid.status !== 'analyzed' && 
-    bid.status !== 'processing'
-  ).length;
-
-  const handleDeleteProject = async () => {
-    try {
-      const response = await fetch(`/api/projects/${params.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete project');
-      
-      window.location.href = '/projects';
-    } catch (error) {
-      console.error('Error deleting project:', error);
-      alert('Failed to delete project');
-    }
-  };
-
-  const handleDeleteBid = async (bidId) => {
-    try {
-      const response = await fetch(`/api/projects/${params.id}/bids/${bidId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete bid');
-      
-      await refreshBids();
-      setShowDeleteBidModal(false);
-      setBidToDelete(null);
-    } catch (error) {
-      console.error('Error deleting bid:', error);
-      alert('Failed to delete bid');
-    }
-  };
-
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto p-6">
@@ -345,12 +260,6 @@ export default function ProjectPage({ params }) {
               </div>
             ) : null}
           </div>
-          <button
-            onClick={() => setShowDeleteProjectModal(true)}
-            className="text-red-600 hover:text-red-800"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
         </div>
       </div>
       
@@ -368,22 +277,16 @@ export default function ProjectPage({ params }) {
                 Compare Selected ({selectedBids.length})
               </button>
             )}
-            
-            {eligibleBidCount > 0 && (
-              <button
-                onClick={() => setShowAnalyzeModal(true)}
-                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
-              >
-                <PlayCircle className="w-4 h-4 mr-2" />
-                {selectedEligibleBidCount > 0 
-                  ? `Analyze Selected (${selectedEligibleBidCount})`
-                  : `Analyze All (${eligibleBidCount})`}
-              </button>
-            )}
-            
+            <Link
+              href={`/projects/${params.id}/analyze-multiple`}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+            >
+              <UploadCloud className="w-4 h-4 mr-2" />
+              Analyze Multiple Bids
+            </Link>
             <button
               onClick={() => setShowUploadModal(true)}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
             >
               <UploadCloud className="w-4 h-4 mr-2" />
               Upload Bid
@@ -451,7 +354,15 @@ export default function ProjectPage({ params }) {
                     </button>
                   ) : (
                     <button
-                      onClick={() => analyzeBid(bid._id)}
+                      onClick={() => {
+                        console.log('Analyze button clicked for bid:', bid);
+                        try {
+                          analyzeBid(bid._id);
+                          console.log('analyzeBid function called successfully');
+                        } catch (error) {
+                          console.error('Error in analyze button click handler:', error);
+                        }
+                      }}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
                     >
                       Analyze
@@ -464,15 +375,6 @@ export default function ProjectPage({ params }) {
                   >
                     <ChevronRight className="w-5 h-5" />
                   </Link>
-                  <button
-                    onClick={() => {
-                      setBidToDelete(bid);
-                      setShowDeleteBidModal(true);
-                    }}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             ))}
@@ -480,60 +382,54 @@ export default function ProjectPage({ params }) {
         )}
       </div>
       
-      {/* Modals */}
-      <UploadModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        projectId={params.id}
-        onUploadComplete={(results) => {
-          // Refresh bids list
-          refreshBids();
-          
-          // Close modal
-          setShowUploadModal(false);
-          
-          // Show success message
-          alert(`Successfully uploaded ${results.length} bid${results.length !== 1 ? 's' : ''}`);
-        }}
-      />
-
-      <AnalyzeModal
-        isOpen={showAnalyzeModal}
-        onClose={() => {
-          setShowAnalyzeModal(false);
-        }}
-        projectId={params.id}
-        bids={bids}
-        selectedBids={selectedBids}
-        onComplete={async (results) => {
-          await refreshBids();
-          setShowAnalyzeModal(false);
-          setSelectedBids([]);
-          const successCount = results.filter(r => r.success).length;
-          alert(`Successfully analyzed ${successCount} of ${results.length} bids`);
-        }}
-      />
-
-      {/* Delete Project Modal */}
-      <DeleteModal
-        isOpen={showDeleteProjectModal}
-        onClose={() => setShowDeleteProjectModal(false)}
-        onConfirm={handleDeleteProject}
-        title="Delete Project"
-        message="Are you sure you want to delete this project? This will also delete all associated bids and cannot be undone."
-      />
-
-      {/* Delete Bid Modal */}
-      <DeleteModal
-        isOpen={showDeleteBidModal}
-        onClose={() => {
-          setShowDeleteBidModal(false);
-          setBidToDelete(null);
-        }}
-        onConfirm={() => handleDeleteBid(bidToDelete?._id)}
-        title="Delete Bid"
-        message={`Are you sure you want to delete the bid from ${bidToDelete?.bidder || 'this bidder'}? This action cannot be undone.`}
-      />
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium mb-4">Upload Bid Document</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bid File (PDF, DOCX, XLSX)
+              </label>
+              <input
+                type="file"
+                onChange={handleFileChange}
+                accept=".pdf,.docx,.xlsx,.xls"
+                className="w-full border border-gray-300 rounded-md py-2 px-3"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFileUpload}
+                disabled={!uploadFile || uploadLoading}
+                className={`px-4 py-2 rounded-md text-white ${
+                  !uploadFile || uploadLoading
+                    ? 'bg-gray-400'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {uploadLoading ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Analyze Modal */}
+      {analyzeModalOpen && selectedBidForAnalysis && (
+        <AnalyzeModal 
+          isOpen={analyzeModalOpen}
+          onClose={handleAnalysisComplete}
+          bid={selectedBidForAnalysis}
+          projectId={params.id}
+        />
+      )}
     </div>
   );
 }

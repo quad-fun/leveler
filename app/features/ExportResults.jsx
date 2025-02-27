@@ -2,56 +2,38 @@
 
 import React from 'react';
 import { FileSpreadsheet, FileText } from 'lucide-react';
-import ExcelJS from 'exceljs';
 
 const ExportResults = ({ results }) => {
   const exportToExcel = async () => {
-    // Create workbook
-    const workbook = new ExcelJS.Workbook();
+    try {
+      const response = await fetch('/api/export-bids/excel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(results),
+      });
 
-    // Summary Sheet
-    const summarySheet = workbook.addWorksheet('Summary');
-    summarySheet.addRows([
-      ['Bid Analysis Summary'],
-      ['Recommended Bid', results.summary.recommendedBid],
-      ['Reasoning', results.summary.reasoning],
-      [''],
-      ['Cost Comparison'],
-      ['Bidder', 'Total Cost'],
-      ...results.bidComparison.map(bid => 
-        [bid.bidder, bid.totalCost]
-      )
-    ]);
+      if (!response.ok) throw new Error('Excel generation failed');
 
-    // Risk Assessment Sheet
-    const riskSheet = workbook.addWorksheet('Risk Assessment');
-    riskSheet.addRows([
-      ['Risk Assessment'],
-      ['Risk Factors'],
-      ...results.risks.map(factor => [factor])
-    ]);
-
-    // Recommendations Sheet
-    const recsSheet = workbook.addWorksheet('Recommendations');
-    recsSheet.addRows([
-      ['Recommendations'],
-      ...results.recommendations.map(rec => [rec])
-    ]);
-
-    // Generate and download file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'bid-analysis.xlsx';
-    a.click();
-    window.URL.revokeObjectURL(url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'bid-analysis.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      alert('Export function is currently unavailable. Please try again later.');
+    }
   };
 
   const exportToPDF = async () => {
     try {
-      const response = await fetch('/api/export-bids', {  // Fixed path to match your route file
+      const response = await fetch('/api/export-bids', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,6 +54,7 @@ const ExportResults = ({ results }) => {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error exporting PDF:', error);
+      alert('Export function is currently unavailable. Please try again later.');
     }
   };
 

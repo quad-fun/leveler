@@ -1,9 +1,9 @@
-// app/projects/[id]/bids/[bidId]/page.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Building, Calendar, FileText, Download, ArrowUpRight, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Building, Calendar, FileText, Download, ArrowRight } from 'lucide-react';
+import AnalyzeModal from '../../../../features/AnalyzeModal';
 
 export default function BidDetailsPage({ params }) {
   const { id, bidId } = params;
@@ -12,6 +12,7 @@ export default function BidDetailsPage({ params }) {
   const [bid, setBid] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [analyzeModalOpen, setAnalyzeModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,6 +71,24 @@ export default function BidDetailsPage({ params }) {
       month: 'short', 
       day: 'numeric' 
     });
+  };
+
+  const handleAnalysisComplete = () => {
+    // Refresh the bid data
+    const fetchBid = async () => {
+      try {
+        const response = await fetch(`/api/projects/${id}/bids/${bidId}`);
+        if (response.ok) {
+          const updatedBid = await response.json();
+          setBid(updatedBid);
+        }
+      } catch (error) {
+        console.error('Error refreshing bid:', error);
+      }
+    };
+    
+    fetchBid();
+    setAnalyzeModalOpen(false);
   };
 
   if (loading) {
@@ -233,6 +252,7 @@ export default function BidDetailsPage({ params }) {
             
             {bid.status !== 'analyzed' && (
               <button
+                onClick={() => setAnalyzeModalOpen(true)}
                 className={`w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${
                   bid.status === 'processing' ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
@@ -254,23 +274,28 @@ export default function BidDetailsPage({ params }) {
               </button>
               
               {bid.status === 'analyzed' && (
-                <button className="w-full flex items-center justify-between py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50">
-                  <span>Export Analysis</span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </button>
+                <Link
+                  href={`/projects/${id}/compare?bids=${bidId}`}
+                  className="w-full flex items-center justify-between py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  <span>Compare With Others</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               )}
-              
-              <Link 
-                href={`/projects/${id}/compare?bids=${bidId}`}
-                className="w-full flex items-center justify-between py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                <span>Compare With Others</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Analyze Modal */}
+      {analyzeModalOpen && (
+        <AnalyzeModal 
+          isOpen={analyzeModalOpen}
+          onClose={handleAnalysisComplete}
+          bid={bid}
+          projectId={id}
+        />
+      )}
     </div>
   );
 }
