@@ -1,3 +1,4 @@
+// app/utils/bidPreprocessor.js
 /**
  * Bid document preprocessor to reduce token usage before sending to OpenAI
  */

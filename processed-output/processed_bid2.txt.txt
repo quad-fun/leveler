@@ -1,0 +1,158 @@
+BID DOCUMENT EXTRACTION FROM: bid2.txt
+
+PRICING INFORMATION:
+FINANCIAL PROPOSAL ### Total Project Cost: $73,842,600 #### Cost Breakdown:
+1. Site Work & Foundations: $6,245,800
+2. Structure & Envelope: $14,768,520
+3. Interior Construction: $12,553,242
+4. Medical Equipment Infrastructure: $9,599,538
+5. Mechanical Systems: $11,815,816
+6. Electrical & Low Voltage Systems: $9,599,538
+7. Medical Gas Systems: $3,692,130
+8. Site Improvements: $2,215,278
+9. General Requirements: $3,353,016 #### Cost Components:
+- **Materials**: $34,706,022
+- **Labor**: $28,043,188
+- **Equipment**: $4,430,556
+- **Overhead**: $3,692,130
+- **Profit**: $2,970,704 ## 4. PROJECT SCHEDULE - Preconstruction & Permitting: 3 months
+- Site Preparation: 2 months
+- Foundations: 3 months
+- Structure: 5 months
+- Building Envelope: 3 months
+- Interior Rough-In: 4 months
+- Interior Finishes: 5 months
+- Medical Equipment Installation: 3 months
+- Commissioning & Certification: 3 months
+- Final Inspections & Closeout: 2 months **Total Construction Duration**: 24 months (includes 2 months of overlap between phases)
+**Anticipated Completion Date**: March 15, 2027 ## 5. PROJECT TEAM - Project Executive: Dr. Elizabeth Reyes, PE (22 years healthcare experience)
+- Project Manager: Thomas Wilson, CHC (15 years healthcare experience)
+- Superintendent: Marcus Johnson (18 years healthcare experience)
+- MEP Coordinator: Patricia Lopez, PE (12 years healthcare experience)
+- Medical Equipment Coordinator: Dr. James Chen (10 years experience)
+- Infection Control Specialist: Maria Sanchez, CIC (14 years experience) ## 6. MATERIAL SPECIFICATIONS ### Structural Systems
+- Concrete: 8,500 cubic yards (5,000 PSI minimum)
+- Structural Steel: 1,850 tons
+- Reinforcing Steel: 950 tons ### Envelope
+- Exterior Wall System: High-performance precast panels with integral insulation
+- Windows: Low-E insulated glazing (U-factor: 0.28)
+- Roofing: 80-mil TPO with 30-year warranty ### Interior
+- Flooring: Seamless antimicrobial vinyl in clinical areas
+- Walls: Impact-resistant gypsum board with antimicrobial paint
+- Ceilings: Clean-room rated suspended ceiling systems
+- Doors: Automated touchless operation at critical locations ### MEP Systems
+- HVAC: 100% outside air systems for surgical areas
+- Filtration: HEPA filtration for all clinical spaces
+- Electrical: Redundant systems with emergency backup
+- Plumbing: Medical-grade fixtures and piping systems ## 7. HEALTHCARE-SPECIFIC CONSIDERATIONS - **Infection Control Risk Assessment (ICRA) Plan**: Class IV containment procedures
+- **Interim Life Safety Measures (ILSM)**: Comprehensive plan for all construction phases
+- **Noise/Vibration Control**: Advanced monitoring and mitigation strategies
+- **Medical Equipment Coordination**: Dedicated team for equipment installation
+- **Commissioning**: Enhanced commissioning process for critical healthcare systems ## 8. RISK MANAGEMENT Our bid includes mitigation strategies for:
+- Unforeseen conditions in connecting to existing facility (7% contingency)
+- Medical equipment changes and updates during construction
+- Supply chain challenges for specialized medical materials
+- Regulatory compliance and certification requirements
+- Maintaining continuous operations of existing facility ## 9. VALUE ENGINEERING OPTIONS We have identified $3.4M in potential savings:
+- Alternative medical gas distribution: $820,000
+- MEP system reconfiguration: $1,200,000
+- Interior materials alternatives: $760,000
+- Structural system optimization: $620,000 ## 10. QUALITY ASSURANCE - Third-party testing and inspection
+- BIM coordination for clash detection
+- Mock-ups of critical areas prior to installation
+- Comprehensive commissioning plan
+- Regular quality control inspections ## 11. TERMS AND CONDITIONS - Payment Terms: Monthly progress billing
+- Retainage: 5% (reduced to 2.5% at 50% completion)
+- Performance & Payment Bonds: Included
+- Insurance: $15M general liability, $30M umbrella
+- Warranty: 2-year comprehensive warranty ## 12. EXCLUSIONS - Medical equipment purchase (infrastructure only included)
+- Hazardous material remediation beyond allowance
+- Owner-furnished items
+- IT/communication equipment
+- Utility tap fees and impact fees ## CONTACT INFORMATION **Primary Contact**: Dr. Elizabeth Reyes, Project Executive
+**Phone**: (555) 987-6543
+**Email**: e.reyes@alliancehealthbuilders.com --- *This bid proposal is valid for 90 days from the submission date. Alliance Healthcare Builders is committed to diversity, inclusion, and sustainability in all our construction practices.*
+
+TIMELINE INFORMATION:
+SCHEDULE - Preconstruction & Permitting: 3 months
+- Site Preparation: 2 months
+- Foundations: 3 months
+- Structure: 5 months
+- Building Envelope: 3 months
+- Interior Rough-In: 4 months
+- Interior Finishes: 5 months
+- Medical Equipment Installation: 3 months
+- Commissioning & Certification: 3 months
+- Final Inspections & Closeout: 2 months **Total Construction Duration**: 24 months (includes 2 months of overlap between phases)
+**Anticipated Completion Date**: March 15, 2027 ## 5. PROJECT TEAM - Project Executive: Dr. Elizabeth Reyes, PE (22 years healthcare experience)
+- Project Manager: Thomas Wilson, CHC (15 years healthcare experience)
+- Superintendent: Marcus Johnson (18 years healthcare experience)
+- MEP Coordinator: Patricia Lopez, PE (12 years healthcare experience)
+- Medical Equipment Coordinator: Dr. James Chen (10 years experience)
+- Infection Control Specialist: Maria Sanchez, CIC (14 years experience) ## 6. MATERIAL SPECIFICATIONS ### Structural Systems
+- Concrete: 8,500 cubic yards (5,000 PSI minimum)
+- Structural Steel: 1,850 tons
+- Reinforcing Steel: 950 tons ### Envelope
+- Exterior Wall System: High-performance precast panels with integral insulation
+- Windows: Low-E insulated glazing (U-factor: 0.28)
+- Roofing: 80-mil TPO with 30-year warranty ### Interior
+- Flooring: Seamless antimicrobial vinyl in clinical areas
+- Walls: Impact-resistant gypsum board with antimicrobial paint
+- Ceilings: Clean-room rated suspended ceiling systems
+- Doors: Automated touchless operation at critical locations ### MEP Systems
+- HVAC: 100% outside air systems for surgical areas
+- Filtration: HEPA filtration for all clinical spaces
+- Electrical: Redundant systems with emergency backup
+- Plumbing: Medical-grade fixtures and piping systems ## 7. HEALTHCARE-SPECIFIC CONSIDERATIONS - **Infection Control Risk Assessment (ICRA) Pla
+
+[...TRUNCATED... (7073 characters removed to reduce token count)...]
+
+nager: Thomas Wilson, CHC (15 years healthcare experience)
+- Superintendent: Marcus Johnson (18 years healthcare experience)
+- MEP Coordinator: Patricia Lopez, PE (12 years healthcare experience)
+- Medical Equipment Coordinator: Dr. James Chen (10 years experience)
+- Infection Control Specialist: Maria Sanchez, CIC (14 years experience) ## 6. MATERIAL SPECIFICATIONS ### Structural Systems
+- Concrete: 8,500 cubic yards (5,000 PSI minimum)
+- Structural Steel: 1,850 tons
+- Reinforcing Steel: 950 tons ### Envelope
+- Exterior Wall System: High-performance precast panels with integral insulation
+- Windows: Low-E insulated glazing (U-factor: 0.28)
+- Roofing: 80-mil TPO with 30-year warranty ### Interior
+- Flooring: Seamless antimicrobial vinyl in clinical areas
+- Walls: Impact-resistant gypsum board with antimicrobial paint
+- Ceilings: Clean-room rated suspended ceiling systems
+- Doors: Automated touchless operation at critical locations ### MEP Systems
+- HVAC: 100% outside air systems for surgical areas
+- Filtration: HEPA filtration for all clinical spaces
+- Electrical: Redundant systems with emergency backup
+- Plumbing: Medical-grade fixtures and piping systems ## 7. HEALTHCARE-SPECIFIC CONSIDERATIONS - **Infection Control Risk Assessment (ICRA) Plan**: Class IV containment procedures
+- **Interim Life Safety Measures (ILSM)**: Comprehensive plan for all construction phases
+- **Noise/Vibration Control**: Advanced monitoring and mitigation strategies
+- **Medical Equipment Coordination**: Dedicated team for equipment installation
+- **Commissioning**: Enhanced commissioning process for critical healthcare systems ## 8. RISK MANAGEMENT Our bid includes mitigation strategies for:
+- Unforeseen conditions in connecting to existing facility (7% contingency)
+- Medical equipment changes and updates during construction
+- Supply chain challenges for specialized medical materials
+- Regulatory compliance and certification requirements
+- Maintaining continuous operations of existing facility ## 9. VALUE ENGINEERING OPTIONS We have identified $3.4M in potential savings:
+- Alternative medical gas distribution: $820,000
+- MEP system reconfiguration: $1,200,000
+- Interior materials alternatives: $760,000
+- Structural system optimization: $620,000 ## 10. QUALITY ASSURANCE - Third-party testing and inspection
+- BIM coordination for clash detection
+- Mock-ups of critical areas prior to installation
+- Comprehensive commissioning plan
+- Regular quality control inspections ## 11. TERMS AND CONDITIONS - Payment Terms: Monthly progress billing
+- Retainage: 5% (reduced to 2.5% at 50% completion)
+- Performance & Payment Bonds: Included
+- Insurance: $15M general liability, $30M umbrella
+- Warranty: 2-year comprehensive warranty ## 12. EXCLUSIONS - Medical equipment purchase (infrastructure only included)
+- Hazardous material remediation beyond allowance
+- Owner-furnished items
+- IT/communication equipment
+- Utility tap fees and impact fees ## CONTACT INFORMATION **Primary Contact**: Dr. Elizabeth Reyes, Project Executive
+**Phone**: (555) 987-6543
+**Email**: e.reyes@alliancehealthbuilders.com --- *This bid proposal is valid for 90 days from the submission date. Alliance Healthcare Builders is committed to diversity, inclusion, and sustainability in all our construction practices.*
+
+
+ADDITIONAL CONTEXT: The original document contained 5499 characters. This is an extract of the key pricing, timeline, materials, and labor information.
