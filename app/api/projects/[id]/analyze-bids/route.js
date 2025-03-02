@@ -3,6 +3,8 @@ import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { preprocessBidDocuments } from '../../../../utils/simpleBidPreprocessor';
 
+const FORCE_MOCK_DATA = false; // Override environment setting
+
 export async function POST(request, { params }) {
   try {
     const { id } = params;

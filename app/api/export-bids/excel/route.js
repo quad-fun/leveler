@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 
+const FORCE_MOCK_DATA = false; 
+
 export async function POST(request) {
   try {
     const results = await request.json();

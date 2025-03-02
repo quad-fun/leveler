@@ -1,107 +1,91 @@
-// app/utils/fileUtils.js
+/**
+ * Utility functions for file handling in the BidUpload component
+ */
 
 /**
- * Extracts bidder name from filename using common patterns
- * @param {string} filename The name of the file
- * @returns {string} Extracted bidder name
+ * Extract a bidder name from a filename
+ * @param {string} filename - The filename to extract from
+ * @returns {string} The extracted bidder name
  */
 export function extractBidderFromFilename(filename) {
-    // Remove file extension
-    const nameWithoutExtension = filename.split('.')[0];
-    
-    // Replace common separators with spaces
-    let bidderName = nameWithoutExtension
-      .replace(/_/g, ' ')
-      .replace(/-/g, ' ')
-      .replace(/\./g, ' ');
-    
-    // Handle common bid file naming patterns
-    bidderName = bidderName
-      .replace(/bid /i, '')
-      .replace(/proposal /i, '')
-      .replace(/quote /i, '')
-      .replace(/ estimate$/i, '')
-      .replace(/^from /i, '');
-      
-    // Capitalize first letter of each word
-    bidderName = bidderName.split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-    
-    return bidderName.trim();
-  }
+  if (!filename) return 'Unknown Bidder';
   
-  /**
-   * Formats a file size in bytes to a human-readable string
-   * @param {number} bytes File size in bytes
-   * @param {number} decimals Number of decimal places to show
-   * @returns {string} Formatted file size
-   */
-  export function formatFileSize(bytes, decimals = 0) {
-    if (bytes === 0) return '0 Bytes';
-    
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-  }
+  // Remove file extension
+  let name = filename.split('.')[0];
   
-  /**
-   * Validates file type against a list of allowed types
-   * @param {File} file The file to validate
-   * @param {string[]} allowedTypes Array of allowed MIME types or extensions
-   * @returns {boolean} Whether the file is valid
-   */
-  export function validateFileType(file, allowedTypes) {
-    if (!file || !allowedTypes || !allowedTypes.length) return false;
-    
-    // Check file extension
-    const extension = file.name.split('.').pop().toLowerCase();
-    
-    // Check both MIME type and extension
-    return allowedTypes.some(type => {
-      if (type.startsWith('.')) {
-        // It's an extension
-        return `.${extension}` === type.toLowerCase();
-      }
-      
-      // It's a MIME type
-      return file.type.toLowerCase() === type.toLowerCase();
-    });
-  }
+  // Replace underscores and hyphens with spaces
+  name = name.replace(/[_-]/g, ' ');
   
-  /**
-   * Gets appropriate icon for file type
-   * @param {string} filename The name of the file
-   * @returns {string} Icon name 
-   */
-  export function getFileTypeIcon(filename) {
-    const extension = filename.split('.').pop().toLowerCase();
-    
-    switch (extension) {
-      case 'pdf':
-        return 'FileText';
-      case 'doc':
-      case 'docx':
-        return 'FileText';
-      case 'xls':
-      case 'xlsx':
-        return 'FileSpreadsheet';
-      case 'ppt':
-      case 'pptx':
-        return 'FilePresentation';
-      case 'zip':
-      case 'rar':
-        return 'FileArchive';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return 'Image';
-      default:
-        return 'File';
-    }
+  // Handle common filename prefixes
+  name = name.replace(/^bid_/i, '')
+             .replace(/^proposal_/i, '')
+             .replace(/^quote_/i, '');
+  
+  // Capitalize words
+  name = name.split(' ')
+             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+             .join(' ');
+  
+  return name || 'Unknown Bidder';
+}
+
+/**
+ * Format a file size in bytes to a human-readable format
+ * @param {number} bytes - Size in bytes
+ * @returns {string} Formatted size (e.g., "1.5 MB")
+ */
+export function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+/**
+ * Validate if a file type is allowed
+ * @param {File} file - The file to validate
+ * @param {string[]} allowedTypes - Array of allowed file extensions or MIME types
+ * @returns {boolean} Whether the file type is allowed
+ */
+export function validateFileType(file, allowedTypes) {
+  if (!file || !allowedTypes || !allowedTypes.length) return false;
+  
+  // Check by file extension
+  const extension = '.' + file.name.split('.').pop().toLowerCase();
+  if (allowedTypes.includes(extension)) return true;
+  
+  // Check by MIME type
+  return allowedTypes.includes(file.type);
+}
+
+/**
+ * Get an icon name based on file type
+ * @param {string} filename - The filename to check
+ * @returns {string} Icon name to use
+ */
+export function getFileTypeIcon(filename) {
+  if (!filename) return 'File';
+  
+  const extension = filename.split('.').pop().toLowerCase();
+  
+  switch (extension) {
+    case 'pdf':
+      return 'FileText';
+    case 'doc':
+    case 'docx':
+      return 'FileText';
+    case 'xls':
+    case 'xlsx':
+    case 'csv':
+      return 'FileSpreadsheet';
+    case 'zip':
+    case 'rar':
+    case '7z':
+      return 'FileArchive';
+    default:
+      return 'File';
   }
+}

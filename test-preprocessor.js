@@ -1,7 +1,7 @@
 // test-preprocessor.js
 import fs from 'fs';
 import path from 'path';
-import { preprocessBidDocuments } from './app/utils/bidPreprocessor.js';
+import { preprocessBidDocuments } from './app/utils/simpleBidPreprocessor.js';
 
 // Path to your test files
 const testFilesDir = './test-files';

@@ -2,6 +2,8 @@ import OpenAI from 'openai';
 import { preprocessBidDocuments } from '../../utils/simpleBidPreprocessor';
 import { logTokenUsage, estimateTokens } from '../../utils/tokenTracker';
 
+const FORCE_MOCK_DATA = false; 
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });

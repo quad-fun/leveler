@@ -9,7 +9,7 @@ import {
   TrendingUp, 
   BarChart4, 
   PlusCircle, 
-  Clock, 
+  AlertCircle,
   BuildingIcon,
   ArrowRight,
   DollarSign,
@@ -25,84 +25,41 @@ export default function DashboardHome() {
     recentBids: []
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchDashboardStats = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/dashboard-stats');
+      if (!response.ok) {
+        throw new Error(`Error fetching dashboard stats: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      // Ensure all expected properties exist in the response
+      setStats({
+        totalProjects: data.totalProjects || 0,
+        activeBids: data.activeBids || 0,
+        recentProjects: data.recentProjects || [],
+        recentBids: data.recentBids || []
+      });
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      setStats({
+        totalProjects: 0,
+        activeBids: 0,
+        recentProjects: [],
+        recentBids: []
+      });
+      setError('Failed to load dashboard data. Please try again later.');
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Fetch dashboard stats
-    const fetchDashboardStats = async () => {
-      try {
-        const response = await fetch('/api/dashboard-stats');
-        if (!response.ok) {
-          throw new Error(`Error fetching dashboard stats: ${response.status}`);
-        }
-        const data = await response.json();
-        // Ensure all expected properties exist in the response
-        setStats({
-          totalProjects: data.totalProjects || 0,
-          activeBids: data.activeBids || 0,
-          recentProjects: data.recentProjects || [],
-          recentBids: data.recentBids || []
-        });
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-        // Keep the sample data as fallback
-        setTimeout(() => {
-          setStats({
-            totalProjects: 3,
-            activeBids: 5,
-            recentProjects: [
-              {
-                id: 'p1',
-                name: 'Downtown Residential Tower',
-                location: 'Downtown Metro',
-                bidCount: 3,
-                totalBudget: 85000000,
-                updatedAt: '2025-02-20T14:30:00Z'
-              },
-              {
-                id: 'p2',
-                name: 'Westside Office Complex',
-                location: 'West Business District',
-                bidCount: 2,
-                totalBudget: 56000000,
-                updatedAt: '2025-02-18T09:15:00Z'
-              }
-            ],
-            recentBids: [
-              {
-                id: 'b1',
-                name: 'bid_sample_1.pdf',
-                projectId: 'p1',
-                projectName: 'Downtown Residential Tower',
-                bidder: 'Quantum Urban Builders',
-                totalCost: 82300000,
-                submittedAt: '2025-02-20T09:30:00Z'
-              },
-              {
-                id: 'b3',
-                name: 'bid_sample_3.pdf',
-                projectId: 'p1',
-                projectName: 'Downtown Residential Tower',
-                bidder: 'Sustainable Urban Solutions',
-                totalCost: 88750000,
-                submittedAt: '2025-02-19T11:45:00Z'
-              },
-              {
-                id: 'b4',
-                name: 'westside_bid1.pdf',
-                projectId: 'p2',
-                projectName: 'Westside Office Complex',
-                bidder: 'Metro Commercial Builders',
-                totalCost: 56000000,
-                submittedAt: '2025-02-18T10:20:00Z'
-              }
-            ]
-          });
-          setLoading(false);
-        }, 800);
-      }
-    };
-
     fetchDashboardStats();
   }, []);
 
@@ -169,6 +126,17 @@ export default function DashboardHome() {
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
           </div>
+        ) : error ? (
+          <div className="bg-red-50 p-6 rounded-lg text-center">
+            <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+            <p className="text-red-600">{error}</p>
+            <button 
+              onClick={fetchDashboardStats}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <>
             {/* Stats Cards */}
@@ -204,7 +172,9 @@ export default function DashboardHome() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Analyzed This Month</p>
-                    <p className="text-2xl font-bold text-gray-900">5</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.recentBids?.filter(bid => bid.status === 'analyzed').length || 0}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -340,9 +310,16 @@ export default function DashboardHome() {
                             <p className="text-xs text-gray-500">
                               {bid.projectName} • {bid.submittedAt ? formatDate(bid.submittedAt) : 'Recently submitted'}
                             </p>
-                            <p className="mt-1 text-green-600 font-medium">
-                              {formatCurrency(bid.totalCost)}
-                            </p>
+                            {bid.totalCost ? (
+                              <p className="mt-1 text-green-600 font-medium">
+                                {formatCurrency(bid.totalCost)}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-gray-500 text-sm">
+                                {bid.status === 'analyzed' ? 'Analysis complete' : 
+                                 bid.status === 'processing' ? 'Processing...' : 'Pending analysis'}
+                              </p>
+                            )}
                           </div>
                         </Link>
                       ))}

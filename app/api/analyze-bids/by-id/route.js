@@ -4,6 +4,8 @@ import { logTokenUsage, estimateTokens } from '../../../utils/tokenTracker';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 
+const FORCE_MOCK_DATA = false; // Override environment setting
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Building, Calendar, FileText, UploadCloud, ArrowLeft, ChevronRight, PieChart, X } from 'lucide-react';
-import BidMultiUpload from '../../features/BidMultiUpload';
+import BidMultiUpload from '../../features/BidUpload';
 import { useNotification } from '../../context/NotificationContext';
 
 export default function ProjectPage({ params }) {

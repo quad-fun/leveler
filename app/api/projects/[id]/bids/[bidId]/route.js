@@ -3,6 +3,8 @@
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 
+const FORCE_MOCK_DATA = false; // Override environment setting
+
 // Handle GET request to fetch a single bid
 export async function GET(request, { params }) {
   const { id, bidId } = params;

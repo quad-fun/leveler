@@ -2,6 +2,8 @@
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 
+const FORCE_MOCK_DATA = false; // Override environment setting
+
 export async function GET(request, { params }) {
   try {
     const { id, bidId } = params;

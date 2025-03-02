@@ -3,39 +3,24 @@ import clientPromise from '@/lib/mongodb';
 import { validateProject } from '@/lib/validation/projectValidation';
 import { getAllProjects, createProject } from '@/lib/mockDataService';
 
-// Flag to force using mock data for testing
-const FORCE_MOCK_DATA = process.env.FORCE_MOCK_DATA === 'true';
-
 export async function GET() {
-  // If mock data is forced, return it immediately
-  if (FORCE_MOCK_DATA) {
-    console.log('Using mock projects data (forced)');
-    return Response.json(getAllProjects());
-  }
-
   try {
-    // Set a short timeout for MongoDB connection attempt
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('MongoDB connection timeout')), 3000)
-    );
+    console.log('Fetching all projects from MongoDB...');
     
-    // Try to connect to MongoDB with a timeout
-    const client = await Promise.race([
-      clientPromise,
-      timeoutPromise
-    ]);
-    
+    // Get the MongoDB client
+    const client = await clientPromise;
     const db = client.db("bidleveling");
     
+    // Fetch projects
     const projects = await db.collection("projects")
       .find({})
       .sort({ createdAt: -1 })
       .toArray();
     
-    console.log('Successfully fetched projects from MongoDB');
+    console.log(`Successfully fetched ${projects.length} projects`);
     return Response.json(projects);
   } catch (error) {
-    console.error('Error fetching projects from MongoDB:', error);
+    console.error('Error fetching projects:', error);
     
     // Return mock data as a fallback
     console.log('Falling back to mock projects data');
@@ -45,11 +30,16 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const data = await request.json();
+    console.log('Creating new project...');
     
-    // Validate the incoming data
+    // Parse request data
+    const data = await request.json();
+    console.log('Received project data:', data);
+    
+    // Validate the data
     const validation = validateProject(data);
     if (!validation.success) {
+      console.log('Validation failed:', validation.error.format());
       return Response.json({
         error: 'Validation failed',
         details: validation.error.format()
@@ -57,42 +47,30 @@ export async function POST(request) {
     }
     
     const validData = validation.data;
+    console.log('Data validated successfully');
     
-    // If using mock data, use the mock service
-    if (FORCE_MOCK_DATA) {
-      console.log('Creating mock project (forced)');
-      const newProject = createProject(validData);
-      return Response.json(newProject, { status: 201 });
-    }
+    // Get MongoDB client
+    const client = await clientPromise;
+    const db = client.db("bidleveling");
     
-    try {
-      // Add timestamp and initialize bid count
-      const newProject = {
-        ...validData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        bidCount: 0,
-        totalBudget: validData.totalBudget || null
-      };
-      
-      // Insert into database
-      const client = await clientPromise;
-      const db = client.db("bidleveling");
-      const result = await db.collection("projects").insertOne(newProject);
-      
-      // Return the created project with its ID
-      return Response.json({
-        ...newProject,
-        _id: result.insertedId
-      }, { status: 201 });
-    } catch (dbError) {
-      console.error('MongoDB error when creating project:', dbError);
-      
-      // Fall back to mock data
-      console.log('Falling back to mock data for project creation');
-      const newProject = createProject(validData);
-      return Response.json(newProject, { status: 201 });
-    }
+    // Add timestamp and initialize bid count
+    const newProject = {
+      ...validData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      bidCount: 0,
+      totalBudget: validData.totalBudget || null
+    };
+    
+    // Insert project into database
+    const result = await db.collection("projects").insertOne(newProject);
+    console.log('Project created with ID:', result.insertedId);
+    
+    // Return the created project with its ID
+    return Response.json({
+      ...newProject,
+      _id: result.insertedId
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating project:', error);
     return Response.json({ 
